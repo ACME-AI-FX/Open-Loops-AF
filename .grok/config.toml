@@ -1,0 +1,11 @@
+# Read by the Grok CLI when Open Loops runs it in this folder (config.json agent = "grok").
+# Gmail comes from the app's own bundled MCP server (gmail_mcp.py), which talks to the
+# plain Gmail REST API with the token from gmail_auth.py. We don't use Google's hosted
+# Gmail MCP endpoint (it requires Workspace Developer Preview enrolment) and Grok's own
+# MCP OAuth can't register with Google anyway (no Dynamic Client Registration).
+# Slack comes from Grok's own Slack plugin - authenticate it once via /mcps inside Grok.
+# Relative path: works because Open Loops always runs Grok with --cwd set to this folder.
+[mcp_servers.gmail]
+command = "python3"
+args = ["gmail_mcp.py"]
+enabled = true

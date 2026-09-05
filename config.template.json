@@ -1,0 +1,35 @@
+{
+  "agent": "claude",
+  "owner_name": "",
+  "slack_self_id": "",
+  "internal_domains": [
+    "example.com"
+  ],
+  "refresh_time": "09:15",
+  "chase_external_email": true,
+  "auto_chase": {
+    "enabled": false,
+    "after_workdays": 3,
+    "max_chases": 3,
+    "note": "When enabled, the 08:40 run chases any waiting loop quiet for after_workdays (from the ask or the last chase), up to max_chases times. Each card has an 'auto: on/off' switch. Draft vs send follows send_internal / send_external."
+  },
+  "send_external": false,
+  "tone": {
+    "base": "Warm, friendly British English. Sounds like a colleague who likes the person, not a ticketing system. Never passive-aggressive, never counts how many times you've asked. Assumes they're busy, makes it easy to answer (one clear question, offers to hop on a call or do the legwork). Short: 2-4 sentences. Ends on a light note.",
+    "senior": "Respectful and relaxed. Frame it as keeping them in the loop and asking for a steer and managing up, not chasing. 'When you get a sec' / 'no rush if it's this week'. Give the one-line reason it matters. Sign off warmly.",
+    "peer": "Casual and direct, first names, a bit of humour is fine. Ask straight, offer help.",
+    "junior": "Encouraging and clear. Say exactly what you need and by when, thank them, make it obvious it's fine to ask questions.",
+    "external": "Polite, professional but human. Reference the thread, one specific ask, a soft deadline, thanks for their time."
+  },
+  "escalation": {
+    "1": "first nudge - light touch, friendly check-in",
+    "2": "second - still warm, add a concrete date or what it unblocks, offer a quick call",
+    "3": "third+ - kind but clear that it's now blocking; ask for a yes/no or who else can help. Still no counting of previous asks."
+  },
+  "people": {},
+  "exclude_people": [],
+  "exclude_topics": [],
+  "voice_sample_people": [],
+  "send_internal": false,
+  "send_note": "send_internal / send_external: when ticked, chases to that group are SENT immediately (Slack message / Gmail reply) instead of drafted. Internal = email domain in internal_domains (or a Slack contact with no email). External = anyone else, e.g. vendors and agencies."
+}

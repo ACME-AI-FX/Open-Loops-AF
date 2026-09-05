@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Privacy Policy — Open Loops</title>
+<link rel="icon" href="logo.svg">
+<style>
+ :root{--a:#d97706;--ink:#1e293b;--bg:#fffbeb;--line:#f1e8d2}
+ *{margin:0;padding:0;box-sizing:border-box}
+ body{font:16px/1.65 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif;color:var(--ink);background:var(--bg)}
+ main{max-width:640px;margin:0 auto;padding:48px 24px 40px}
+ h1{font-size:28px;margin-bottom:4px}
+ .sub{color:#8a7b5e;font-size:14px;margin-bottom:26px}
+ h2{font-size:19px;margin:26px 0 8px}
+ p{margin:0 0 12px}
+ ul{margin:0 0 12px 22px}
+ li{margin-bottom:5px}
+ a{color:var(--a)}
+ code{background:#f6efdc;padding:1px 5px;border-radius:4px;font-size:14px}
+ footer{border-top:1px solid var(--line);margin-top:40px;padding-top:14px;font-size:14px}
+</style>
+</head>
+<body>
+<main>
+ <h1>Privacy Policy</h1>
+ <p class="sub">Open Loops · last updated 5 September 2026</p>
+
+ <p>Open Loops is an open-source application that runs entirely on your own computer. The developer operates
+ <b>no servers</b>, collects <b>no data</b>, and has <b>no access</b> to your messages, your accounts, or your
+ usage. This page explains what the software itself touches, locally.</p>
+
+ <h2>What the app accesses</h2>
+ <ul>
+  <li><b>Gmail</b> (if you connect it): messages you sent and the threads they belong to, read via the Gmail API
+      using an OAuth authorisation you grant. It creates drafts; it sends email only if you explicitly enable
+      sending in its settings.</li>
+  <li><b>Slack</b> (if you connect it): your own messages and the conversations they're in, via Slack's official
+      integration, under your own Slack user's existing permissions.</li>
+ </ul>
+
+ <h2>Where your data goes</h2>
+ <ul>
+  <li><b>Your computer.</b> The list of open requests, learned writing style, logs, and OAuth tokens are stored as
+      plain files in the app's folder on your machine. Nothing is uploaded to the developer.</li>
+  <li><b>Your chosen AI provider.</b> The app works by sending relevant message content to the AI assistant
+      <em>you</em> configure — Claude (Anthropic) or Grok (xAI) — under your own account with that provider, subject
+      to that provider's terms and privacy policy. No AI provider is contacted other than the one you choose.</li>
+  <li><b>Nowhere else.</b> No analytics, no telemetry, no third-party services.</li>
+ </ul>
+
+ <h2>Google user data</h2>
+ <p>Open Loops' use of information received from Google APIs adheres to the
+ <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>,
+ including the Limited Use requirements. Gmail data is used only to provide the app's user-facing features
+ described above — finding your unanswered requests and drafting follow-ups — and is never sold, never used for
+ advertising, and never transferred except to the AI provider you configure, as necessary to provide those features.</p>
+
+ <h2>Revoking access</h2>
+ <ul>
+  <li>Gmail: remove Open Loops in your <a href="https://myaccount.google.com/permissions">Google account permissions</a>,
+      and delete <code>state/google_oauth.json</code> from the app folder.</li>
+  <li>Slack: disconnect the integration in your AI assistant's connector settings.</li>
+  <li>Everything else: delete the app folder — that is the entirety of its data.</li>
+ </ul>
+
+ <h2>Contact</h2>
+ <p>Questions or concerns: open an issue on
+ <a href="https://github.com/OscarC178/Open-Loops/issues">github.com/OscarC178/Open-Loops</a>.</p>
+
+ <footer><a href="index.html">← Open Loops</a></footer>
+</main>
+</body>
+</html>

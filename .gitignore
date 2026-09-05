@@ -1,0 +1,13 @@
+# personal data - never commit
+config.json
+state.json
+voice.json
+state/
+google_oauth_client.json
+profiles/
+open-loops-*.md
+# junk
+__pycache__/
+*.pyc
+*.exe
+people_suggested.json
