@@ -23,12 +23,16 @@ SLACK_TOOLS = ["slack.read_channel", "slack.search_public_and_private", "slack.s
 
 PROMPT = """UNATTENDED RUN - do not ask questions. Output only the JSON requested.
 
-Find the people {name}{slack_note} communicates with most, so they can be sorted by seniority.
+Find the people {name}{slack_note} communicates with most - in either direction: people {name}
+writes to AND real people who write to {name} - so they can be sorted by seniority.
 
 {sources}
-Take the top 12-15 people. For each, pick ONE short verbatim message {name} wrote to them that shows the
-tone (a request or a reply, not a link dump). Guess their seniority from context (title, how {name}
-addresses them, whether they give or take instructions) - the owner will confirm.
+Only count real humans writing personally. Skip anything automated or broadcast: newsletters,
+marketing, notifications, receipts, no-reply senders, job alerts, mailing lists.
+Take the top 12-15 people, combining both directions. For each, pick ONE short verbatim message
+between them that shows the relationship - prefer one {name} wrote; if {name} never wrote to them,
+one they wrote to {name} (a request or a reply, not a link dump). Guess their seniority from context
+(title, how {name} addresses them, whether they give or take instructions) - the owner will confirm.
 External = works at another company (email domain not in: {domains}).
 
 <<<PEOPLE>>>
@@ -39,13 +43,16 @@ External = works at another company (email domain not in: {domains}).
 
 
 def main():
-    since = (datetime.now() - timedelta(days=30)).date().isoformat()
+    days = min(int(CFG.get("history_days") or 30), 365)  # Settings > History
+    since = (datetime.now() - timedelta(days=days)).date().isoformat()
     sid = CFG.get("slack_self_id") or ""
     sources = []
     if sid:
         sources.append(f'- Slack (if the Slack tools are available): slack_search_public_and_private query "from:<@{sid}> after:{since}" sort=timestamp, several pages.\n'
                        '  Count which DMs / people the messages are addressed to (DM partner, or the @-mentioned person in a channel).')
-    sources.append(f'- Gmail (if the Gmail tools are available): search_threads "in:sent after:{since.replace("-", "/")}" - count recipients, ignoring no-reply / notifications / mailing lists.')
+    g = since.replace("-", "/")
+    sources.append(f'- Gmail sent (if the Gmail tools are available): search_threads "in:sent after:{g}" - count recipients.')
+    sources.append(f'- Gmail received (if available): search_threads "in:inbox after:{g} -category:promotions -category:social" - count the real people who wrote to {CFG.get("owner_name") or "the owner"} personally.')
     prompt = PROMPT.format(name=CFG.get("owner_name") or "the owner",
                            slack_note=f" (Slack <@{sid}>)" if sid else "",
                            sources="\n".join(sources), domains=", ".join(CFG.get("internal_domains", [])))

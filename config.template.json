@@ -1,5 +1,6 @@
 {
   "agent": "claude",
+  "history_days": 30,
   "owner_name": "",
   "slack_self_id": "",
   "internal_domains": [

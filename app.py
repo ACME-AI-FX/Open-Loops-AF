@@ -12,7 +12,7 @@ STATE = ROOT / "state.json"
 INDEX = ROOT / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
-EDITABLE = ("agent", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation")
+EDITABLE = ("agent", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation")
 import os
 PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
 WIN = sys.platform == "win32"
@@ -22,13 +22,26 @@ IDLE_EXIT_S = 3 * 3600  # server quits after 3h with no page activity
 last_seen = time.time()
 PEOPLEF = ROOT / "people_suggested.json"
 
+def history_days():
+    """How far back the AI reads (Settings > History). Drives the first-scan cursor and who's-who."""
+    try:
+        return min(int(json.loads(CONFIG.read_text(encoding="utf-8-sig")).get("history_days") or 30), 365)
+    except Exception:
+        return 30
+
+
+def fresh_state():
+    from datetime import timedelta
+    return json.dumps({"cursor": (datetime.now().astimezone() - timedelta(days=history_days())).isoformat(timespec="minutes"),
+                       "last_refresh": None, "loops": []}, indent=2)
+
+
 # First run on a new machine: make sure config.json and state.json exist so nothing 500s.
 if not CONFIG.exists():
     tpl = ROOT / "config.template.json"
     CONFIG.write_text(tpl.read_text(encoding="utf-8-sig") if tpl.exists() else "{}", encoding="utf-8")
 if not STATE.exists():
-    STATE.write_text(json.dumps({"cursor": (datetime.now().astimezone() - __import__("datetime").timedelta(days=7)).isoformat(timespec="minutes"),
-                                 "last_refresh": None, "loops": []}, indent=2), encoding="utf-8")
+    STATE.write_text(fresh_state(), encoding="utf-8")
 (ROOT / "state" / "logs").mkdir(parents=True, exist_ok=True)
 
 doctor_cache = {"at": 0, "result": None}
@@ -152,8 +165,7 @@ class H(BaseHTTPRequestHandler):
             for k in ("people", "voice_sample_people", "slack_self_id"):
                 cfg[k] = {} if k == "people" else ([] if k == "voice_sample_people" else "")
             CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
-            STATE.write_text(json.dumps({"cursor": (datetime.now().astimezone() - __import__("datetime").timedelta(days=7)).isoformat(timespec="minutes"),
-                                         "last_refresh": None, "loops": []}, indent=2), encoding="utf-8")
+            STATE.write_text(fresh_state(), encoding="utf-8")
             doctor_cache = {"at": 0, "result": None}
             return self._json({"ok": True})
         if self.path == "/api/chase":
