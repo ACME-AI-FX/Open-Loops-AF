@@ -38,6 +38,7 @@ been actioned.{slack_note} Today is {today}.
    broadcast reminders, anything to these people: {exclude_people}; these topics: {exclude_topics};
    and anything that duplicates an existing loop (same owner + same subject => attach to the
    existing loop instead of creating a new one).
+{inbound}
 2. REPLIES. For every existing loop with status "waiting" or "needs_me", re-read its thread/DM
    (Slack: read the DM/channel with the id in `thread`; Gmail: search the subject in `thread`).
    Report the newest message from the owner AFTER {name}'s ask, and whether {name} has replied since.
@@ -46,6 +47,8 @@ been actioned.{slack_note} Today is {today}.
    Rules: owner replied and {name} has not answered since -> "needs_me".
           owner replied with a clear completion ("done", "sorted", delivered the thing) -> "done".
           {name} replied after them with a new ask -> "waiting" (update asked_at).
+          inbound loops (marked "inbound"): once {name} has replied -> "done", unless that reply
+          asks them for something new -> "waiting".
           nothing new -> leave unchanged (omit from updates).
 
 ## Output
@@ -55,7 +58,7 @@ Reply with ONLY a JSON object between the markers, nothing else:
   "new_loops": [{{"id": "<owner-slug>-<topic-slug>", "owner": "...", "owner_email": "... or null",
                   "ask": "one line", "channel": "slack|email", "thread": "DM <name> <channel id> | #channel | email subject",
                   "link": "slack://channel?team=&id=<id> or gmail search url", "asked_at": "ISO datetime",
-                  "notes": ""}}],
+                  "status": "waiting, or needs_me for inbound", "inbound": false, "notes": ""}}],
   "updates": [{{"id": "<existing id>", "status": "waiting|needs_me|done", "last_reply_at": "ISO or null",
                 "reply_snippet": "<=120 chars", "asked_at": "ISO (only if a new ask by {name})"}}],
   "gmail_available": true
@@ -75,8 +78,16 @@ def main():
     if SELF_ID:
         sources.append(f'   - Slack (if the Slack tools are available): slack_search_public_and_private query "from:<@{SELF_ID}> after:{since_date}" sort=timestamp, paginate until you pass the cursor.')
     sources.append(f'   - Gmail (if the Gmail tools are available): search_threads query "in:sent after:{since_date.replace("-", "/")}".')
+    inbound = ("1b. ASKS OF {n} (inbound). Gmail (if available): search_threads query "
+               '"in:inbox after:{g} -category:promotions -category:social". Keep only mail from real people '
+               "(not newsletters, marketing, notifications, receipts, no-reply) where the thread's LATEST message "
+               "asks {n} for a specific action or answer and {n} has not replied since. These become new loops with "
+               '"status": "needs_me" and "inbound": true - owner is the person asking; ask = one line on what they '
+               "need from {n}. The same exclusions and duplicate rule apply.").format(
+                   n=CFG.get("owner_name") or "the owner", g=since_date.replace("-", "/"))
     prompt = PROMPT.format(
         name=CFG.get("owner_name") or "the owner",
+        inbound=inbound,
         slack_note=f" {CFG.get('owner_name') or 'The owner'}'s Slack user id is <@{SELF_ID}>." if SELF_ID else "",
         sources="\n".join(sources),
         today=datetime.now().strftime("%Y-%m-%d %H:%M"),
