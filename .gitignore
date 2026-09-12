@@ -1,13 +1,70 @@
-# personal data - never commit
+# Open Loops - .gitignore
+#
+# Anything that came out of YOUR Slack, Gmail or settings stays on your machine.
+# Private files live in exactly two places, so they are easy to find, back up
+# or carry to a new machine:
+#
+#   1. The app's own runtime files, next to app.py (first block below).
+#   2. private/ - drop anything else sensitive here: notes, exports, screenshots
+#      with real names, sample data. Never committed.
+#
+# To see every private file git is hiding:
+#   git ls-files -o -i --exclude-standard
+# To bundle them all into one archive (e.g. before moving machines):
+#   git ls-files -o -i --exclude-standard -z | tar -czf ~/openloops-private.tgz --null -T -
+#
+# The "Generic" blocks are portable - copy them into any other repo as-is.
+
+# ---- Open Loops runtime data (personal, written by the app) -----------------
+# your settings: name, Slack ID, internal domains, people, tone
 config.json
+# your loops
 state.json
+# learned per-person writing styles
 voice.json
+# output of the people scan
+people_suggested.json
+# state/google_oauth.json (Gmail refresh token) and state/logs/ (one log per run)
 state/
+# Google OAuth client downloaded from Cloud Console
 google_oauth_client.json
 profiles/
+# exports
 open-loops-*.md
-# junk
+
+# ---- Catch-all for anything else private ------------------------------------
+private/
+
+# ---- Generic: secrets and credentials ---------------------------------------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+*credentials*.json
+*token*.json
+*secrets*.json
+*.secret
+.netrc
+
+# ---- Generic: per-machine tool state ----------------------------------------
+# Claude Code local permissions (a shared .claude/ config, if added, stays tracked)
+.claude/settings.local.json
+# Grok CLI auth, should it ever be written here instead of ~/.grok
+.grok/auth.json
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# ---- Generic: generated junk ------------------------------------------------
 __pycache__/
 *.pyc
 *.exe
-people_suggested.json
+*.log
+*.tmp
+*~
+.venv/
+venv/
