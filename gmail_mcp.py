@@ -19,7 +19,7 @@ BODY_CAP = 4000  # chars of message body returned per message
 
 TOOLS = [
     {"name": "search_threads",
-     "description": "Search Gmail threads with normal Gmail query syntax (e.g. \"in:sent after:2026/01/01\", \"subject:invoice\"). Returns thread ids with from/to/subject/date of the latest message.",
+     "description": "Search Gmail threads with normal Gmail query syntax (e.g. \"in:sent after:2026/01/01\", \"subject:invoice\"). Returns thread ids and snippets only — call get_thread for from/to/subject/body.",
      "inputSchema": {"type": "object", "properties": {
          "query": {"type": "string", "description": "Gmail search query"},
          "max_results": {"type": "integer", "description": "max threads (default 25)"}},
@@ -74,14 +74,10 @@ def body_of(payload):
 
 
 def search_threads(a):
+    # One list call only — do not GET each thread here (that was N+1 HTTP).
     q = urllib.parse.urlencode({"q": a["query"], "maxResults": min(int(a.get("max_results") or 25), 50)})
-    out = []
-    for t in api(f"threads?{q}").get("threads", []):
-        meta = api(f"threads/{t['id']}?format=metadata&metadataHeaders=From&metadataHeaders=To&metadataHeaders=Subject&metadataHeaders=Date")
-        h = headers_of(meta["messages"][-1]) if meta.get("messages") else {}
-        out.append({"thread_id": t["id"], "snippet": t.get("snippet", ""), "message_count": len(meta.get("messages", [])),
-                    "latest": {k: h.get(k, "") for k in ("from", "to", "subject", "date")},
-                    "latest_message_id": meta["messages"][-1]["id"] if meta.get("messages") else None})
+    out = [{"thread_id": t["id"], "snippet": t.get("snippet", "")}
+           for t in api(f"threads?{q}").get("threads", [])]
     return {"threads": out}
 
 

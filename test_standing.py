@@ -1,0 +1,127 @@
+"""Standing-items.md round-trip: list, compulsory closure, vault cards on Home.
+
+    python3 test_standing.py    # fast; no Slack/Gmail. Temp vault + temp install.
+"""
+import json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request
+from pathlib import Path
+
+SRC = Path(__file__).resolve().parent
+PORT = 8795
+FILES = ["app.py", "standing.py", "close_standing.py", "agent.py", "refresh.py", "chase.py",
+         "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
+SAMPLE = """---
+title: Standing Items
+type: standing-items
+updated: 2026-08-31
+next-id: 10
+---
+
+# Standing Items
+
+## Open
+
+- [ ] A6 | Claude Code Vault | Run the skill audit | added 2026-08-28
+- [ ] A7 | The Tenants Voice | Encode one Harbor eval | added 2026-08-28
+- [ ] A8 | Claude Code Vault | Add a pre-send verifier | added 2026-08-28
+- [ ] A9 | Claude Code Vault | Snoozed example | added 2026-08-31 | snoozed-until 2099-01-01
+
+## Closed
+
+- [x] A1 | Claude Code Vault | Old item | added 2026-06-05 | done 2026-08-22
+
+Closure notes (2026-08-22): A1 → already done.
+"""
+t0 = time.time()
+
+
+def say(msg):
+    print(f"[{time.time() - t0:5.0f}s] {msg}", flush=True)
+
+
+def check(cond, what):
+    if not cond:
+        raise SystemExit(f"FAIL: {what}")
+    say(f"ok   {what}")
+
+
+def api(path, body=None):
+    data = json.dumps(body).encode() if body is not None else None
+    req = urllib.request.Request(
+        f"http://127.0.0.1:{PORT}{path}", data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST" if body is not None else "GET")
+    try:
+        with urllib.request.urlopen(req, timeout=10) as r:
+            return r.status, json.loads(r.read())
+    except urllib.error.HTTPError as e:
+        return e.code, json.loads(e.read().decode())
+
+
+tmp = Path(tempfile.mkdtemp(prefix="openloops-standing-"))
+vault = tmp / "vault"
+(vault / "02-Research").mkdir(parents=True)
+(vault / "02-Research" / "standing-items.md").write_text(SAMPLE, encoding="utf-8")
+app = tmp / "app"
+app.mkdir()
+for f in FILES:
+    shutil.copy(SRC / f, app / f)
+tpl = json.loads((app / "config.template.json").read_text(encoding="utf-8-sig"))
+tpl["owner_name"] = "Oscar"
+tpl["vault_path"] = str(vault)
+(app / "config.json").write_text(json.dumps(tpl, indent=2), encoding="utf-8")
+(app / "state.json").write_text(json.dumps({
+    "cursor": "2026-01-01T00:00", "last_refresh": "2026-01-02T00:00", "loops": [],
+}), encoding="utf-8")
+
+env = dict(os.environ, OPENLOOPS_PORT=str(PORT), OPENLOOPS_SKIP_AGENT="1")
+srv = subprocess.Popen([sys.executable, "app.py", "--no-browser"], cwd=app, env=env,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+try:
+    for _ in range(40):
+        if socket.socket().connect_ex(("127.0.0.1", PORT)) == 0:
+            break
+        time.sleep(0.1)
+    else:
+        raise SystemExit("FAIL: app.py did not come up")
+
+    loops = api("/api/state")[1]["state"]["loops"]
+    ids = {l["id"] for l in loops}
+    check(ids == {"vault-A6", "vault-A7", "vault-A8"}, "open items A6–A8 on Needs me; snoozed A9 hidden")
+    a6 = next(l for l in loops if l["id"] == "vault-A6")
+    check(a6["status"] == "needs_me" and a6["channel"] == "vault" and a6["owner"] == "Claude Code Vault",
+          "vault card shape")
+    check(a6.get("source", "").endswith("02-Research/standing-items.md") and a6.get("vault_flag") == "new",
+          "card says where it came from and flags first sighting as new")
+    st = json.loads((app / "state.json").read_text(encoding="utf-8"))
+    check("A6" in (st.get("vault_seen") or {}) and "loops" in st and not any(l.get("channel")=="vault" for l in st["loops"]),
+          "first-seen is tracked in state.json; vault cards are not stored as loops")
+    text = (vault / "02-Research" / "standing-items.md").read_text(encoding="utf-8")
+    (vault / "02-Research" / "standing-items.md").write_text(
+        text.replace("Encode one Harbor eval", "Encode TWO Harbor evals"), encoding="utf-8")
+    a7 = next(l for l in api("/api/state")[1]["state"]["loops"] if l["id"] == "vault-A7")
+    check(a7["vault_flag"] == "updated" and "TWO" in a7["ask"] and a7.get("vault_changed_at"),
+          "rewritten standing-item is flagged updated on the next read")
+
+    code, err = api("/api/action", {"id": "vault-A6", "action": "done", "closure": ""})
+    check(code == 400 and "closing" in err.get("error", ""), "done without a closure note is 400")
+    text = (vault / "02-Research" / "standing-items.md").read_text(encoding="utf-8")
+    check("- [ ] A6 |" in text, "empty closure did not close A6")
+
+    code, out = api("/api/action", {"id": "vault-A6", "action": "done",
+                                    "closure": "Ran the deletion test; /synthesise split is a follow-up."})
+    check(code == 200 and out.get("ok"), "done with a closure note")
+    text = (vault / "02-Research" / "standing-items.md").read_text(encoding="utf-8")
+    check("- [x] A6 |" in text and "- [ ] A6 |" not in text, "A6 moved to Closed as [x]")
+    check("## Closure notes" in text and "Ran the deletion test" in text, "clarification written under Closure notes")
+    ids = {l["id"] for l in api("/api/state")[1]["state"]["loops"]}
+    check("vault-A6" not in ids and "vault-A7" in ids, "closed item leaves Needs me; others stay")
+
+    html = (app / "index.html").read_text(encoding="utf-8")
+    check("closeVault(" in html and "How are you closing" in html and "close_ok" in html,
+          "Home tab has the compulsory close popup")
+finally:
+    srv.terminate()
+    srv.wait(timeout=5)
+    shutil.rmtree(tmp, ignore_errors=True)
+
+say("all passed")

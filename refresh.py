@@ -70,12 +70,18 @@ Reply with ONLY a JSON object between the markers, nothing else:
 def main():
     s = json.loads(STATE.read_text(encoding="utf-8-sig"))
     recent = (datetime.now() - timedelta(days=5)).isoformat()
-    open_loops = [l for l in s["loops"] if l["status"] in ("waiting", "needs_me")
-                  or (l["status"] == "done" and (l.get("closed_at") or "") >= recent)]
+    def from_mail(l):
+        # typed reminders (channel "note") stay until the owner marks them done
+        return not l.get("manual") and l.get("channel") not in ("note", "vault")
+
+    open_loops = [l for l in s["loops"] if from_mail(l) and (
+        l["status"] in ("waiting", "needs_me")
+        or (l["status"] == "done" and (l.get("closed_at") or "") >= recent))]
     cursor = datetime.fromisoformat(s["cursor"])
     since_date = (cursor - timedelta(days=1)).date().isoformat()
     sources = []
-    if SELF_ID:
+    slack_on = bool(SELF_ID) and agent.slack_enabled()
+    if slack_on:
         sources.append(f'   - Slack (if the Slack tools are available): slack_search_public_and_private query "from:<@{SELF_ID}> after:{since_date}" sort=timestamp, paginate until you pass the cursor.')
     sources.append(f'   - Gmail (if the Gmail tools are available): search_threads query "in:sent after:{since_date.replace("-", "/")}".')
     inbound = ("1b. ASKS OF {n} (inbound). Gmail (if available): search_threads query "
@@ -88,7 +94,7 @@ def main():
     prompt = PROMPT.format(
         name=CFG.get("owner_name") or "the owner",
         inbound=inbound,
-        slack_note=f" {CFG.get('owner_name') or 'The owner'}'s Slack user id is <@{SELF_ID}>." if SELF_ID else "",
+        slack_note=f" {CFG.get('owner_name') or 'The owner'}'s Slack user id is <@{SELF_ID}>." if slack_on else "",
         sources="\n".join(sources),
         today=datetime.now().strftime("%Y-%m-%d %H:%M"),
         loops=json.dumps([{k: l[k] for k in ("id", "owner", "ask", "channel", "thread", "asked_at", "status", "closed_at") if k in l} for l in open_loops], indent=1, ensure_ascii=False),
@@ -98,7 +104,7 @@ def main():
     )
     stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
     print(f"[{stamp}] refresh: {len(open_loops)} open loops, cursor {s['cursor']}")
-    p = agent.run(prompt, (SLACK_TOOLS if SELF_ID else []) + GMAIL_TOOLS)
+    p = agent.run(prompt, (SLACK_TOOLS if slack_on else []) + GMAIL_TOOLS)
     (LOG / f"refresh-{stamp}.log").write_text(p.stdout + "\n--- stderr ---\n" + p.stderr, encoding="utf-8")
     # some agents drop the markers and emit bare JSON - accept that too
     m = re.search(r"<<<OPENLOOPS>>>(.*?)<<<END>>>", p.stdout, re.S) or re.search(r'(\{\s*"new_loops"\s*:.*\})', p.stdout, re.S)

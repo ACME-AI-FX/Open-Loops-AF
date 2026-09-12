@@ -26,6 +26,8 @@ details summary{cursor:pointer;color:var(--mut);font-size:12px}
 .steps span.done{border-color:var(--g);color:var(--g)}.steps span.now{background:var(--b);border-color:var(--b);color:#fff}
 input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--b);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}
+#close_modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;padding:24px}
+#close_modal.on{display:block}
 </style></head><body>
 <header><h1>Open Loops</h1>
 <div class="tabs"><button id="tab_home" class="on" onclick="showTab('home')">Home</button><button id="tab_settings" onclick="showTab('settings')">⚙ Settings</button></div>
@@ -68,15 +70,42 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
  <div id="st_auto" class="box" style="display:none"><h3 id="auto_title"></h3><div class="sub" id="auto_sub"></div><div style="margin-top:10px"><button id="auto_retry" onclick="retryStage()" style="display:none">Try again</button></div></div>
 
  <div id="lists">
-  <h2>Needs me <span id="n1"></span></h2><div id="needs"></div>
+  <h2>Needs me <span id="n1"></span></h2>
+  <div class="box" id="add_need" style="padding:10px 12px">
+   <div class="sub" style="margin-bottom:8px">Add something you need to do for someone. It stays here until you mark it done — Refresh does not close these.</div>
+   <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+    <input id="need_who" list="need_people" placeholder="contact (optional)" style="width:170px" autocomplete="off" onkeydown="if(event.key==='Enter')addNeed()">
+    <datalist id="need_people"></datalist>
+    <input id="need_ask" placeholder="what to do" style="flex:1;min-width:180px" onkeydown="if(event.key==='Enter')addNeed()">
+    <button class="primary" onclick="addNeed()">Add</button>
+   </div>
+   <input id="need_notes" placeholder="note (optional)" style="width:100%;margin-top:6px" onkeydown="if(event.key==='Enter')addNeed()">
+  </div>
+  <div id="needs"></div>
   <h2>Waiting on them <span id="n2"></span></h2><div id="waiting"></div>
   <details><summary>Snoozed / done</summary><div id="rest"></div></details>
  </div>
  <details style="margin-top:14px"><summary>Last job output</summary><pre id="log" class="log"></pre></details>
 </div>
+<div id="close_modal">
+ <div class="box" style="max-width:560px;margin:12vh auto">
+  <h3 id="close_title">How are you closing this?</h3>
+  <div class="sub" id="close_sub" style="margin-bottom:8px"></div>
+  <textarea id="close_text" rows="5" style="width:100%" placeholder="What did you do? Name any other standing items this changes (A7, A8…)." oninput="$('#close_ok').disabled=!this.value.trim()"></textarea>
+  <div style="margin-top:10px;display:flex;gap:8px">
+   <button class="primary" id="close_ok" disabled onclick="submitClose()">Mark done</button>
+   <button onclick="hideClose()">Cancel</button>
+  </div>
+ </div>
+</div>
 
 <!-- ================= SETTINGS ================= -->
 <div id="page_settings" style="display:none">
+ <div class="box">
+  <h3>ClaudeCloud vault</h3>
+  <div class="sub">Folder with <code>02-Research/standing-items.md</code>. Blank = <code>~/ClaudeCloud</code>. Open Loops re-reads that file every time the page refreshes (about once a minute) — it does not watch GitHub. New or rewritten lines show a <b>new</b> / <b>updated</b> mark for the rest of the day. Done asks how you closed them and writes that into the vault.</div>
+  <input id="cfg_vault" style="margin:6px 0 0;width:100%" placeholder="/Users/you/ClaudeCloud">
+ </div>
  <div class="box">
   <h3>Your name</h3>
   <div class="sub">First name, as you'd sign a message.</div>
@@ -85,7 +114,11 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
  <div class="box">
   <h3>Your AI</h3>
   <div class="sub">Which AI assistant reads your messages and writes the nudges. It must be installed and signed in on this computer — after switching, the Home tab re-checks the connections.</div>
-  <select id="cfg_agent" style="margin:6px 0 0;font:inherit;padding:4px"><option value="claude">Claude (Claude Code)</option><option value="grok">Grok (Grok CLI)</option></select>
+  <select id="cfg_agent" style="margin:6px 0 0;font:inherit;padding:4px" onchange="if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=this.value==='grok'?'':'none'"><option value="claude">Claude (Claude Code)</option><option value="grok">Grok (Grok CLI)</option></select>
+  <div id="cfg_slack_wrap" style="margin-top:10px">
+   <label><input type="checkbox" id="cfg_use_slack"> Use Slack</label>
+   <div class="sub">Grok only. Off (default) = Gmail-only; Slack is not started or checked. On = load Grok's Slack plugin and show it on the connection checklist — then Open Grok → <code>/mcps</code> → Slack → <b>i</b>.</div>
+  </div>
  </div>
  <div class="box">
   <h3>History</h3>
@@ -156,6 +189,7 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
 const $=s=>document.querySelector(s);
 let S=null,J=null,TODAY=null,C=null,V=null,P=null,DOC=null;
 const fmt=d=>d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
 function banner(msg){const b=$('#banner');if(!msg){b.style.display='none';return}b.style.display='';b.textContent=msg}
 
@@ -170,9 +204,13 @@ async function loadState(){const r=await api('/api/state');S=r.state;J=r.jobs;TO
 async function loadCfg(){const r=await api('/api/config');C=r.config;V=r.voice;P=r.people_suggested;agentUI()}
 const agentLabel=()=>(C&&C.agent)==='grok'?'Grok':'Claude';
 function agentUI(){if(!$('#agent_btn'))return;$('#agent_btn').textContent='Open '+agentLabel();
- $('#agent_help').innerHTML='Slack and Gmail are both optional — connect whichever you actually use; <b>one is enough</b>. '+((C&&C.agent)==='grok'
-  ?'<b>Open Grok</b> opens a black window. If it asks you to sign in, follow the link. For Slack, type <code>/mcps</code> in that window, press Enter, select <b>slack</b>, press <b>i</b> to authenticate, and click Allow in your browser. Gmail needs a one-off extra step of its own — the Gmail row above says exactly what to do. Already connected? Then there\'s nothing to do here — the ticks appear within a minute.'
-  :'<b>Open Claude</b> opens a black window. If it asks you to sign in, follow the link. For Slack or Gmail, type <code>/mcp</code> in that window, press Enter, pick <b>Slack</b> or <b>claude.ai Gmail</b>, choose <b>Authenticate</b>, and click Allow in your browser. If they\'re already connected there\'s nothing to do here — the ticks will appear within a minute.')}
+ const grok=(C&&C.agent)==='grok';
+ if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=grok?'':'none';
+ $('#agent_help').innerHTML=grok
+  ?((C&&C.use_slack)
+    ?'<b>Open Grok</b> opens a black window. If it asks you to sign in, follow the link. For Slack, type <code>/mcps</code>, select <b>slack</b>, press <b>i</b>, and click Allow. Gmail needs a one-off extra step of its own — the Gmail row above says exactly what to do. Already connected? The ticks appear within a minute.'
+    :'<b>Open Grok</b> opens a black window. If it asks you to sign in, follow the link. Slack is <b>off</b> — Gmail alone is enough. Tick <b>Use Slack</b> in ⚙ Settings if you want DMs scanned. Gmail needs a one-off extra step of its own — the Gmail row above says exactly what to do.')
+  :'Slack and Gmail are both optional — connect whichever you actually use; <b>one is enough</b>. <b>Open Claude</b> opens a black window. If it asks you to sign in, follow the link. For Slack or Gmail, type <code>/mcp</code> in that window, press Enter, pick <b>Slack</b> or <b>claude.ai Gmail</b>, choose <b>Authenticate</b>, and click Allow in your browser. If they\'re already connected there\'s nothing to do here — the ticks will appear within a minute.';}
 const running=n=>!!(J&&J[n]&&J[n].running);
 const havePeople=()=>!!(C&&C.people&&Object.keys(C.people).length);
 const haveVoice=()=>!!(V&&V.people&&Object.keys(V.people).length);
@@ -231,7 +269,7 @@ function paintButtons(st){const rb=$('#refresh');rb.disabled=st==='connect'||st=
  const vb=$('#voicebtn');vb.disabled=!havePeople()||running('voice');vb.textContent=running('voice')?'Learning…':'Learn my tone';vb.title=havePeople()?'':'save Who\'s who first';
  $('#meta').textContent=S?'last refresh '+(S.last_refresh?fmt(S.last_refresh):'never'):'';
  const g=DOC?DOC.steps.find(x=>x.id==='gmail'):null;$('#gmail').textContent=g?(g.ok?'gmail ok':'gmail: not connected (optional)'):'';
- $('#log').textContent=J?['refresh','chase','voice','people'].map(k=>J[k]&&J[k].log?`--- ${k}\n${J[k].log}`:'').filter(Boolean).join('\n'):''}
+ $('#log').textContent=J?['refresh','chase','voice','people','standing'].map(k=>J[k]&&J[k].log?`--- ${k}\n${J[k].log}`:'').filter(Boolean).join('\n'):''}
 
 // ---------- lists ----------
 function workdays(from){let a=new Date(from),b=new Date(),n=0;a.setHours(0,0,0,0);b.setHours(0,0,0,0);for(let d=new Date(a);d<b;d.setDate(d.getDate()+1)){if(d.getDay()%6)n++;}return n}
@@ -239,21 +277,39 @@ function col(l){if(l.status==='needs_me')return 'b';const w=workdays(l.status===
 function isExt(l){if(!C)return false;const e=(l.owner_email||'').toLowerCase();return !!e&&!(C.internal_domains||[]).some(d=>e.endsWith('@'+d))}
 function willSend(l){return C&&(isExt(l)?!!C.send_external:!!C.send_internal)}
 function card(l,dim){const w=workdays(l.asked_at);const sn=l.snooze_until&&l.snooze_until>TODAY;
+ const vault=l.channel==='vault';
+ const note=l.channel==='note'||(l.manual&&!vault);
  return `<div class="card ${dim||sn?'snoozed':''}"><div class="dot ${col(l)}"></div>
- <div><div class="who">${l.owner}</div><div class="sub">${l.channel} · ${w}wd${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)">✎ chase drafted ${fmt(l.last_chase_at)}</b> — check Slack/Gmail drafts before drafting again`):''}${sn?` · snoozed → ${l.snooze_until}`:''}</div></div>
- <div><div>${l.ask}</div><div class="sub">asked ${fmt(l.asked_at)}${l.last_reply_at?` · they: <i>"${(l.reply_snippet||'').slice(0,100)}"</i> ${fmt(l.last_reply_at)}`:' · no reply yet'}${l.link?` · <a href="${l.link}" target="_blank">open</a>`:''}${l.notes?`<br>${l.notes}`:''}</div></div>
- <div class="acts">${l.status!=='done'?`<button onclick="act('${l.id}','done')">done</button>`:`<button onclick="act('${l.id}','reopen')">reopen</button>`}
- ${l.status==='waiting'?`<button onclick="chase('${l.id}')" ${running('chase')?'disabled':''}>${willSend(l)?'send chase':'draft chase'}</button>`:''}
- ${sn?`<button onclick="act('${l.id}','unsnooze')">unsnooze</button>`:l.status!=='done'?`<button onclick="snooze('${l.id}')">snooze</button>`:''}
- ${l.status==='waiting'&&C&&C.auto_chase&&C.auto_chase.enabled?(l.auto_off?`<button onclick="act('${l.id}','auto_on')" title="auto-chase is off for this loop">auto: off</button>`:`<button onclick="act('${l.id}','auto_off')" title="stop the timer from ${willSend(l)?'sending':'drafting'} chases for this loop" style="border-color:var(--g)">auto: on</button>`):''}</div></div>`}
+ <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)">✎ chase drafted ${fmt(l.last_chase_at)}</b> — check Slack/Gmail drafts before drafting again`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
+ <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'ClaudeCloud / 02-Research/standing-items.md')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${esc(l.notes)}`:''}</div></div>
+ <div class="acts">${l.status!=='done'?(vault?`<button onclick="closeVault('${esc(l.id)}')">done</button>`:`<button onclick="act('${esc(l.id)}','done')">done</button>`):`<button onclick="act('${esc(l.id)}','reopen')">reopen</button>`}
+ ${l.status==='waiting'&&!note&&!vault?`<button onclick="chase('${esc(l.id)}')" ${running('chase')?'disabled':''}>${willSend(l)?'send chase':'draft chase'}</button>`:''}
+ ${vault?'':sn?`<button onclick="act('${esc(l.id)}','unsnooze')">unsnooze</button>`:l.status!=='done'?`<button onclick="snooze('${esc(l.id)}')">snooze</button>`:''}
+ ${vault||l.status==='done'?'':`<button onclick="editNote('${esc(l.id)}')">${l.notes?'edit note':'note'}</button>`}
+ ${l.status==='waiting'&&!note&&!vault&&C&&C.auto_chase&&C.auto_chase.enabled?(l.auto_off?`<button onclick="act('${esc(l.id)}','auto_on')" title="auto-chase is off for this loop">auto: off</button>`:`<button onclick="act('${esc(l.id)}','auto_off')" title="stop the timer from ${willSend(l)?'sending':'drafting'} chases for this loop" style="border-color:var(--g)">auto: on</button>`):''}</div></div>`}
 function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=='done'&&!(l.snooze_until&&l.snooze_until>TODAY);
  const needs=L.filter(l=>l.status==='needs_me'&&live(l)),wait=L.filter(l=>l.status==='waiting'&&live(l)).sort((a,b)=>a.asked_at<b.asked_at?-1:1),rest=L.filter(l=>!live(l));
  $('#needs').innerHTML=needs.map(l=>card(l)).join('')||'<div class="empty">nothing waiting on you</div>';
  $('#waiting').innerHTML=wait.map(l=>card(l)).join('')||'<div class="empty">nothing outstanding</div>';
  $('#rest').innerHTML=rest.map(l=>card(l,true)).join('');
- $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`}
+ $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`;
+ const dl=$('#need_people');if(dl)dl.innerHTML=Object.keys((C&&C.people)||{}).sort().map(n=>`<option value="${esc(n)}">`).join('')}
 async function act(id,action,extra){await api('/api/action',Object.assign({id,action},extra||{}));await loadState();renderLists()}
 function snooze(id){const d=prompt('Snooze until (YYYY-MM-DD)',new Date(Date.now()+2*864e5).toISOString().slice(0,10));if(d)act(id,'snooze',{until:d})}
+function editNote(id){const l=S.loops.find(x=>x.id===id);if(!l)return;const n=prompt('Note',l.notes||'');if(n!==null)act(id,'note',{notes:n})}
+let closingId=null;
+function closeVault(id){const l=S.loops.find(x=>x.id===id);if(!l)return;closingId=id;
+ $('#close_title').textContent='How are you closing '+(l.vault_id||id)+'?';
+ $('#close_sub').textContent=(l.owner?l.owner+' — ':'')+l.ask;
+ $('#close_text').value='';$('#close_ok').disabled=true;$('#close_modal').classList.add('on');$('#close_text').focus()}
+function hideClose(){closingId=null;$('#close_modal').classList.remove('on')}
+async function submitClose(){const closure=$('#close_text').value.trim();if(!closingId||!closure)return;
+ const id=closingId;try{await api('/api/action',{id,action:'done',closure});hideClose();if(J)J.standing={running:true};await loadState();renderLists()}
+ catch(e){banner('Could not close that: '+e.message)}}
+async function addNeed(){const owner=$('#need_who').value.trim(),ask=$('#need_ask').value.trim(),notes=$('#need_notes').value.trim();
+ if(!ask){banner('Need something to do.');return}
+ try{await api('/api/action',{action:'add',owner,ask,notes});$('#need_who').value='';$('#need_ask').value='';$('#need_notes').value='';banner('');await loadState();renderLists()}
+ catch(e){banner('Could not add that: '+e.message)}}
 async function refresh(){if(running('refresh'))return;await api('/api/refresh',{});J.refresh={running:true};tick()}
 async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
  if(willSend(l)&&!confirm(`This will SEND a chase to ${l.owner} right now, in your name, without you seeing it first.\n\nSend?`))return;
@@ -261,7 +317,9 @@ async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
  await api('/api/chase',{id});J.chase={running:true};tick()}
 
 // ---------- settings form: painted only on first open and after Save, never by background ticks ----------
-function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
+function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_use_slack').checked=!!C.use_slack;$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
+ if($('#cfg_vault'))$('#cfg_vault').value=C.vault_path||'';
+ if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=(C.agent||'claude')==='grok'?'':'none';
  $('#cfg_ext').checked=!!C.chase_external_email;$('#cfg_send_int').checked=!!C.send_internal;$('#cfg_send_ext').checked=!!C.send_external;$('#cfg_domains').value=(C.internal_domains||[]).join(', ');
  const A=C.auto_chase||{};$('#cfg_auto').checked=!!A.enabled;$('#cfg_auto_days').value=A.after_workdays||3;$('#cfg_auto_max').value=A.max_chases||3;
  $('#tones').innerHTML=Object.entries(C.tone||{}).map(([k,v])=>`<div style="margin-top:8px"><b style="font-size:12px;text-transform:capitalize">${k}</b><textarea data-tone="${k}" rows="2" style="width:100%">${v}</textarea></div>`).join('');
@@ -275,10 +333,10 @@ function paintVoice(){if(V&&haveVoice()){$('#voice_meta').textContent='learned '
 async function saveCfg(){try{const tone={};document.querySelectorAll('[data-tone]').forEach(t=>tone[t.dataset.tone]=t.value);
  // people: radios in the table win; the JSON box is the fallback for adding/removing entries
  let people=JSON.parse($('#cfg_people').value);Object.keys(C.people||{}).forEach((n,i)=>{const v=document.querySelector(`input[name="pp${i}"]:checked`);if(v&&people[n])people[n].level=v.value});
- const body={agent:$('#cfg_agent').value,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
+ const body={agent:$('#cfg_agent').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),vault_path:($('#cfg_vault')&&$('#cfg_vault').value.trim())||'',chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
   exclude_people:$('#cfg_excl_people').value.split(',').map(s=>s.trim()).filter(Boolean),exclude_topics:$('#cfg_excl_topics').value.split(',').map(s=>s.trim()).filter(Boolean)};
- const agentChanged=(C.agent||'claude')!==body.agent;
- await api('/api/config',body);$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString();await loadCfg();paintForm();if(agentChanged)doctor(true);tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message}}
+ const agentChanged=(C.agent||'claude')!==body.agent,slackChanged=!!C.use_slack!==body.use_slack;
+ await api('/api/config',body);$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString();await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message}}
 async function saveTime(){$('#time_msg').textContent='updating task…';const r=await api('/api/schedule',{time:$('#cfg_time').value});$('#time_msg').textContent=r.ok?'scheduled weekdays at '+$('#cfg_time').value:'failed: '+(r.error||r.out)}
 async function learnVoice(){if(!havePeople()||running('voice'))return;kicked.voice=true;await api('/api/voice',{});J.voice={running:true};paintButtons(stage())}
 async function startOver(){if(!confirm('Wipe the list, people picks and learned tone, and go back to step 1?'))return;await api('/api/reset',{});DOC=null;docAt=0;P=null;peopleRendered='';Object.keys(kicked).forEach(k=>delete kicked[k]);formPainted=false;await loadCfg();showTab('home');loop()}

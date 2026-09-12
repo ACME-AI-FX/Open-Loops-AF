@@ -58,16 +58,17 @@ Output ONLY:
 def main():
     people = {p: CFG["people"].get(p, {}).get("level", "peer") for p in CFG["voice_sample_people"]}
     sid = CFG.get("slack_self_id") or ""
+    slack_on = bool(sid) and agent.slack_enabled()
     sources = []
-    if sid:
+    if slack_on:
         sources.append("   - Slack (if the Slack tools are available): find the DM with them (slack_search_users to get the id, then slack_read_channel on that id, limit 60).")
     sources.append('   - Gmail (if the Gmail tools are available): search_threads "to:<their name or email> in:sent" (skip if no email / nothing found).')
-    prompt = PROMPT.format(name=CFG["owner_name"], slack_note=f" (Slack <@{sid}>)" if sid else "",
+    prompt = PROMPT.format(name=CFG["owner_name"], slack_note=f" (Slack <@{sid}>)" if slack_on else "",
                            sources="\n".join(sources),
                            people=json.dumps(people, indent=1), tone_base=CFG["tone"]["base"])
     stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
     print(f"[{stamp}] learning voice from {len(people)} people...")
-    p = agent.run(prompt, (SLACK_TOOLS if sid else []) + GMAIL_TOOLS)
+    p = agent.run(prompt, (SLACK_TOOLS if slack_on else []) + GMAIL_TOOLS)
     (LOG / f"voice-{stamp}.log").write_text(p.stdout + "\n--- stderr ---\n" + p.stderr, encoding="utf-8")
     # some agents drop the markers and emit bare JSON - accept that too
     m = re.search(r"<<<VOICE>>>(.*?)<<<END>>>", p.stdout, re.S) or re.search(r'(\{\s*"general"\s*:.*\})', p.stdout, re.S)

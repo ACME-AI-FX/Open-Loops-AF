@@ -2,7 +2,7 @@
 
     python app.py            -> http://localhost:8765
 """
-import json, shlex, socket, subprocess, sys, threading, time, webbrowser
+import json, re, shlex, socket, subprocess, sys, threading, time, webbrowser
 from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -12,7 +12,7 @@ STATE = ROOT / "state.json"
 INDEX = ROOT / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
-EDITABLE = ("agent", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation")
+EDITABLE = ("agent", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path")
 import os
 PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
 WIN = sys.platform == "win32"
@@ -45,7 +45,7 @@ if not STATE.exists():
 (ROOT / "state" / "logs").mkdir(parents=True, exist_ok=True)
 
 doctor_cache = {"at": 0, "result": None}
-jobs = {"refresh": {"running": False, "log": ""}, "chase": {"running": False, "log": ""}, "voice": {"running": False, "log": ""}, "people": {"running": False, "log": ""}}
+jobs = {"refresh": {"running": False, "log": ""}, "chase": {"running": False, "log": ""}, "voice": {"running": False, "log": ""}, "people": {"running": False, "log": ""}, "standing": {"running": False, "log": ""}}
 
 
 def load():
@@ -92,7 +92,14 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b)
         elif self.path == "/api/state":
-            self._json({"state": load(), "jobs": jobs, "today": date.today().isoformat()})
+            import standing
+            s = load()
+            s = dict(s)
+            vault_loops, dirty = standing.as_loops(s)
+            if dirty:
+                save(s)
+            s["loops"] = list(s.get("loops") or []) + vault_loops
+            self._json({"state": s, "jobs": jobs, "today": date.today().isoformat()})
         elif self.path == "/api/config":
             voice = json.loads(VOICEF.read_text(encoding="utf-8-sig")) if VOICEF.exists() else None
             people = json.loads(PEOPLEF.read_text(encoding="utf-8-sig")) if PEOPLEF.exists() else None
@@ -172,14 +179,59 @@ class H(BaseHTTPRequestHandler):
             return self._json({"started": run_job("chase", ["chase.py", body["id"]])})
         if self.path == "/api/action":
             s = load()
+            act = body.get("action")
+            vid = str(body.get("id") or "")
+            if vid.startswith("vault-"):
+                import standing
+                item_id = vid.split("-", 1)[1].upper()
+                if act != "done":
+                    return self._json({"error": "vault items are closed with done only"}, 400)
+                closure = (body.get("closure") or "").strip()
+                try:
+                    closed = standing.close_item(item_id, closure)
+                except ValueError as e:
+                    return self._json({"error": str(e)}, 400)
+                (ROOT / "state").mkdir(parents=True, exist_ok=True)
+                (ROOT / "state" / "standing-close.json").write_text(
+                    json.dumps({"id": item_id, "closure": closure,
+                                "project": closed["project"], "action": closed["action"]},
+                               ensure_ascii=False), encoding="utf-8")
+                started = run_job("standing", ["close_standing.py"])
+                return self._json({"ok": True, "id": vid, "started": started})
+            if act == "add":
+                owner = (body.get("owner") or "").strip()[:80]
+                ask = (body.get("ask") or "").strip()[:300]
+                notes = (body.get("notes") or "").strip()[:2000]
+                if not ask:
+                    return self._json({"error": "need something to do"}, 400)
+                cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
+                email = None
+                for name, p in (cfg.get("people") or {}).items():
+                    if name.lower() == owner.lower():
+                        owner = name
+                        email = (p or {}).get("email")
+                        break
+                slug = lambda t: re.sub(r"[^a-z0-9]+", "-", t.lower()).strip("-")[:32] or "x"
+                now = datetime.now().astimezone()
+                lid = f"note-{slug(owner or 'me')}-{slug(ask)}-{now.strftime('%Y%m%d%H%M%S')}"
+                s["loops"].insert(0, {
+                    "id": lid, "owner": owner, "owner_email": email, "ask": ask,
+                    "channel": "note", "thread": None, "link": None,
+                    "asked_at": now.isoformat(timespec="minutes"),
+                    "status": "needs_me", "inbound": True, "manual": True,
+                    "notes": notes, "last_reply_at": None, "reply_snippet": None,
+                    "chases": 0, "snooze_until": None,
+                })
+                save(s)
+                return self._json({"ok": True, "id": lid})
             for lp in s["loops"]:
                 if lp["id"] == body["id"]:
-                    act = body["action"]
                     if act == "done":
                         lp["status"] = "done"
                         lp["closed_at"] = datetime.now().isoformat(timespec="minutes")
                     elif act == "reopen":
-                        lp["status"] = "waiting"
+                        # typed reminders belong in Needs me, not Waiting on them
+                        lp["status"] = "needs_me" if lp.get("channel") == "note" or lp.get("manual") else "waiting"
                         lp["snooze_until"] = None
                     elif act == "snooze":
                         lp["snooze_until"] = body["until"]
@@ -190,7 +242,7 @@ class H(BaseHTTPRequestHandler):
                     elif act == "auto_on":
                         lp["auto_off"] = False
                     elif act == "note":
-                        lp["notes"] = body.get("notes", "")
+                        lp["notes"] = (body.get("notes") or "").strip()[:2000]
             save(s)
             return self._json({"ok": True})
         self._json({"error": "not found"}, 404)

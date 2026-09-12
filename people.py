@@ -46,19 +46,20 @@ def main():
     days = min(int(CFG.get("history_days") or 30), 365)  # Settings > History
     since = (datetime.now() - timedelta(days=days)).date().isoformat()
     sid = CFG.get("slack_self_id") or ""
+    slack_on = bool(sid) and agent.slack_enabled()
     sources = []
-    if sid:
+    if slack_on:
         sources.append(f'- Slack (if the Slack tools are available): slack_search_public_and_private query "from:<@{sid}> after:{since}" sort=timestamp, several pages.\n'
                        '  Count which DMs / people the messages are addressed to (DM partner, or the @-mentioned person in a channel).')
     g = since.replace("-", "/")
     sources.append(f'- Gmail sent (if the Gmail tools are available): search_threads "in:sent after:{g}" - count recipients.')
     sources.append(f'- Gmail received (if available): search_threads "in:inbox after:{g} -category:promotions -category:social" - count the real people who wrote to {CFG.get("owner_name") or "the owner"} personally.')
     prompt = PROMPT.format(name=CFG.get("owner_name") or "the owner",
-                           slack_note=f" (Slack <@{sid}>)" if sid else "",
+                           slack_note=f" (Slack <@{sid}>)" if slack_on else "",
                            sources="\n".join(sources), domains=", ".join(CFG.get("internal_domains", [])))
     stamp = datetime.now().strftime("%Y-%m-%d_%H%M")
     print(f"[{stamp}] finding people...")
-    p = agent.run(prompt, (SLACK_TOOLS if sid else []) + GMAIL_TOOLS)
+    p = agent.run(prompt, (SLACK_TOOLS if slack_on else []) + GMAIL_TOOLS)
     (LOG / f"people-{stamp}.log").write_text(p.stdout + "\n--- stderr ---\n" + p.stderr, encoding="utf-8")
     # some agents drop the markers and emit bare JSON - accept that too
     m = re.search(r"<<<PEOPLE>>>(.*?)<<<END>>>", p.stdout, re.S) or re.search(r'(\{\s*"people"\s*:.*\})', p.stdout, re.S)

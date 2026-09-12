@@ -15,8 +15,8 @@ computer only. It never sends anything unless you turn that on.
 2. **Windows**: double-click **Open Loops.cmd**. **Mac**: double-click **Open Loops.command** — if you see a
    warning that it's from an unidentified developer, right-click it and choose **Open** instead, just this once.
 3. A window appears. It may ask for your first name. Let it finish (1–3 minutes). It installs two
-   helper programs if you don't have them (Python and Claude), puts an **Open Loops** icon on your Desktop,
-   and opens the app.
+   helper programs if you don't have them (Python and Claude), puts **Open Loops.app** (the orange loop)
+   on your Desktop and in the Dock, and opens the app.
 
 ## 2. Connect your accounts (one-off)
 
@@ -34,7 +34,7 @@ When the required rows are ticked the checklist disappears and your list starts 
 
 ## 3. Every day
 
-- Double-click **Open Loops** on the Desktop. It refreshes itself every weekday morning at 09:15, so it's ready when you sit down.
+- Double-click **Open Loops** on the Desktop, or the same icon in the Dock. It refreshes itself every weekday morning at 09:15, so it's ready when you sit down.
 - **Needs me** — people who've replied and are waiting on *you*.
 - **Waiting on them** — things you've asked for. Green = recent, amber = a few days, red = getting old.
 - **draft chase** — writes a friendly nudge in your voice and puts it in the conversation as an unsent draft. You read it, you press send.

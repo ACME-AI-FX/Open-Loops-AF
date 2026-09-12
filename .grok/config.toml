@@ -3,7 +3,8 @@
 # plain Gmail REST API with the token from gmail_auth.py. We don't use Google's hosted
 # Gmail MCP endpoint (it requires Workspace Developer Preview enrolment) and Grok's own
 # MCP OAuth can't register with Google anyway (no Dynamic Client Registration).
-# Slack comes from Grok's own Slack plugin - authenticate it once via /mcps inside Grok.
+# Slack / Vercel arrive as Claude plugins Grok also loads. Headless jobs pin them off
+# via state/grok-home (disabled_mcp_servers); Slack is restored when use_slack is true.
 # Relative path: works because Open Loops always runs Grok with --cwd set to this folder.
 [mcp_servers.gmail]
 command = "python3"

@@ -72,6 +72,8 @@ def main(loop_id):
     l = next((x for x in s["loops"] if x["id"] == loop_id), None)
     if not l:
         print("no such loop"); sys.exit(1)
+    if l.get("manual") or l.get("channel") in ("note", "vault"):
+        print("SKIPPED: this is a typed reminder, not a chase"); sys.exit(2)
     ext = is_external(l)
     if l["channel"] == "email" and ext and not CFG.get("chase_external_email", True):
         print("SKIPPED: external-email chasing is switched off in Settings"); sys.exit(2)
@@ -96,6 +98,8 @@ def main(loop_id):
     if l["channel"] == "email":
         tools = ["gmail.search_threads", "gmail.get_thread", "gmail.reply" if send else "gmail.create_draft"]
     else:
+        if not agent.slack_enabled():
+            print("SKIPPED: Slack is off in Settings (Use Slack)"); sys.exit(2)
         tools = ["slack.read_channel", "slack.search_users", "slack.send_message" if send else "slack.send_message_draft"]
     sid = CFG.get("slack_self_id") or ""
     prompt = PROMPT.format(

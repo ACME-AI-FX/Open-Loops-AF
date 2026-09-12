@@ -24,7 +24,7 @@ import doctor
 MINIMAL = "/usr/bin:/bin:/usr/sbin:/sbin"  # what launchd gives its children
 FIXED = f"{os.environ['HOME']}/.local/bin:/opt/homebrew/bin:/usr/local/bin:{MINIMAL}"
 PORT_INSTALL, PORT_LIVE = 8797, 8798
-FILES = ["app.py", "refresh.py", "chase.py", "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
+FILES = ["app.py", "standing.py", "close_standing.py", "refresh.py", "chase.py", "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
 SHELL_FILES = ["doctor.py", "refresh.py", "chase.py", "voice.py", "people.py"]
 LABEL = "com.openloops.refresh"
 t0 = time.time()
@@ -127,9 +127,11 @@ try:
     check(r.returncode == 0, f"install.sh completed in throwaway HOME ({(r.stdout + r.stderr)[-200:].strip() if r.returncode else 'ok'})")
     check((home / "Library" / "LaunchAgents" / f"{LABEL}.plist").exists() and "bootstrap" in launchctl_log.read_text(),
           "register-task.sh went through the launchctl stub (real launchd untouched)")
-    launcher = home / "Desktop" / "Open Loops.command"
-    check(launcher.exists(), "Desktop launcher written")
-    path_export_works(launcher, "Desktop launcher (install.sh heredoc)")
+    launcher = home / "Desktop" / "Open Loops.app" / "Contents" / "MacOS" / "openloops"
+    check(launcher.exists(), "Desktop Open Loops.app written")
+    check((home / "Applications" / "Open Loops.app" / "Contents" / "Resources" / "AppIcon.icns").exists(),
+          "app icon is in the bundle")
+    path_export_works(launcher, "Desktop Open Loops.app launcher")
     hold.close()
     hold = None
 

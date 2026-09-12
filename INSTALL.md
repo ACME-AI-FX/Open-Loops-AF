@@ -11,7 +11,7 @@ behalf — chases are created as **drafts** in the original thread and you press
 | Windows 10/11, or macOS | Task Scheduler + Desktop shortcut (Windows) / `launchd` + Desktop launcher (Mac) | — |
 | Python 3.11+ (stdlib only, no pip installs) | runs the page and the scripts | `python --version` (Windows) / `python3 --version` (Mac) |
 | An AI CLI, logged in — Claude Code (default) or Grok | does the reading/classifying via headless runs (`agent.py`) | `claude --version` / `grok --version` |
-| Slack connected in that CLI *(optional)* | reads your DMs/channels, creates Slack drafts | Claude: `/mcp` shows *slack* connected · Grok: `/mcps`, select *slack*, press `i` |
+| Slack connected in that CLI *(optional)* | reads your DMs/channels, creates Slack drafts | Claude: `/mcp` shows *slack* connected · Grok: off unless ⚙ Settings → *Use Slack*, then `/mcps`, select *slack*, press `i` |
 | Gmail connected *(optional)* | reads sent mail/threads, creates Gmail drafts | Claude: `/mcp` → *claude.ai Gmail* → Authenticate · Grok: see **Gmail with Grok** below |
 
 Slack and Gmail are both optional sources — connect **at least one**; the checklist and every job adapt to
@@ -29,7 +29,9 @@ whichever is available (Gmail-only and Slack-only installs both work).
 
 `config.json` has `"agent": "claude"` (default) or `"grok"` — change it in ⚙ Settings → *Your AI*. `agent.py` maps
 each job's tool list to the agent's own naming and flags; the prompts are identical. The connection checklist
-(`doctor.py`) checks whichever agent is selected.
+(`doctor.py`) checks whichever agent is selected. With Grok, Slack is **opt-in** (`"use_slack"`): off, jobs are
+Gmail-only and the Slack plugin is not started or probed. Vercel is never loaded. Headless Grok jobs pass
+`--effort low` because the CLI defaults to `xhigh`.
 
 ### Gmail with Grok (one-off, ~5 minutes)
 
@@ -61,7 +63,8 @@ always drafts even if *Send* is ticked; Slack sending still works.
    - **Mac**: double-click **`Open Loops.command`** (right-click → **Open** the first time, to get past the
      unidentified-developer warning). It runs `install.sh`, which does the same but installs Python / Claude Code
      via Homebrew / the official installer if missing, copies the app to
-     `~/Documents/OpenLoops`, creates a Desktop launcher (`Open Loops.command`), and registers
+     `~/Documents/OpenLoops`, creates **Open Loops.app** (logo icon) on the Desktop and in
+     `~/Applications` and pins it to the Dock, and registers
      the weekday refresh as a `launchd` agent (`com.openloops.refresh`, default 09:15).
 
    The downloaded folder can be deleted afterwards either way.
@@ -135,5 +138,7 @@ state.json        the loops
 index.html        the page
 scripts/          run-refresh.ps1, register-task.ps1 (Windows, Task Scheduler)
                    run-refresh.sh, register-task.sh (Mac, launchd)
+                   macos-app.sh (builds Open Loops.app with the logo)
+docs/             logo + GitHub Pages site; AppIcon.icns is the Mac Dock icon
 state/logs/       one log per run
 ```

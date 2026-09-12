@@ -8,7 +8,7 @@
 #   1. Checks for Python 3 and Claude Code, offering to install via Homebrew / the official
 #      installer if missing.
 #   2. Copies Open Loops to ~/Library/Application Support/OpenLoops.
-#   3. Puts an "Open Loops" launcher on your Desktop.
+#   3. Puts Open Loops.app (with the logo) on the Desktop and in ~/Applications.
 #   4. Sets it to refresh every weekday morning (default 09:15) via launchd.
 #   5. Opens the app - which walks you through connecting Slack and email.
 set -e
@@ -108,20 +108,19 @@ PYEOF
 fi
 ok "Files in place"
 
-# ---------- 4. Desktop launcher ----------
-DESK="$HOME/Desktop"
-LAUNCHER="$DESK/Open Loops.command"
-cat > "$LAUNCHER" <<LAUNCHER_EOF
-#!/bin/bash
-export PATH="\$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:\$PATH"
-cd "$DEST"
-nohup python3 app.py >/dev/null 2>&1 &
-disown
-sleep 1
-LAUNCHER_EOF
-chmod +x "$LAUNCHER"
-xattr -d com.apple.quarantine "$LAUNCHER" 2>/dev/null || true
-ok "Desktop launcher created"
+# ---------- 4. App with logo (Dock + Desktop) ----------
+# Real .app so it can sit in the Dock. The zip's Open Loops.command is only first-run install.
+mkdir -p "$HOME/Applications" "$HOME/Desktop"
+DOCK_FLAG=""
+# Don't pin to the Dock from a throwaway $HOME (tests) — killall Dock would hit the real Dock.
+if [ "$HOME" = "/Users/$(whoami)" ]; then
+    DOCK_FLAG="--dock"
+fi
+bash "$DEST/scripts/macos-app.sh" --app-dir "$DEST" --out "$HOME/Applications/Open Loops.app" $DOCK_FLAG
+rm -f "$HOME/Desktop/Open Loops.command"
+rm -rf "$HOME/Desktop/Open Loops.app"
+cp -R "$HOME/Applications/Open Loops.app" "$HOME/Desktop/Open Loops.app"
+ok "Open Loops.app on the Desktop (drag it to the Dock if it isn't there)"
 
 # ---------- 5. Morning refresh ----------
 bash "$DEST/scripts/register-task.sh" --at "$AT"

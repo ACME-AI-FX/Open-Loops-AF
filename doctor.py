@@ -80,29 +80,46 @@ def grok_steps(steps):
     steps.append({"id": "login", "ok": logged, "title": f"Signed in to Grok{(' as ' + email) if email else ''}",
                   "fix": "Click 'Open Grok' below and follow the sign-in link it shows." if not logged else ""})
 
-    # Slack via Grok's plugin; Gmail via the bundled gmail_mcp.py server + gmail_auth.py token
+    # Gmail: bundled gmail_mcp.py + gmail_auth.py. Slack: only if Settings → Use Slack.
+    # Never probe Vercel. Named `mcp doctor gmail` so Slack is not started when opted out.
     import gmail_auth
     tok = gmail_auth.token() if logged else None
     slack = gmail_srv = False
+    want_slack = agent.use_slack()
     if have and logged:
+        args = [cli, "mcp", "doctor"] + ([] if want_slack else ["gmail"]) + ["--json"]
         try:
-            p = subprocess.run([cli, "mcp", "doctor", "--json"], capture_output=True, text=True,
-                               encoding="utf-8", errors="replace", timeout=120, cwd=str(ROOT), shell=WIN)
-            for srv in json.loads(p.stdout or "{}").get("servers", []):
-                if srv.get("name") == "slack" and srv.get("healthy"):
-                    slack = True
+            p = subprocess.run(args, capture_output=True, text=True,
+                               encoding="utf-8", errors="replace", timeout=120, cwd=str(ROOT),
+                               env=agent.grok_job_env(), shell=WIN)
+            data = json.loads(p.stdout or "{}")
+            servers = data.get("servers") or ([data] if isinstance(data, dict) and data.get("name") else [])
+            for srv in servers:
                 if srv.get("name") == "gmail" and srv.get("healthy"):
                     gmail_srv = True
+                if want_slack and srv.get("name") == "slack" and srv.get("healthy"):
+                    slack = True
         except Exception:
             pass
-    steps.append({"id": "slack", "ok": slack, "optional": True, "title": "Slack connected (optional)",
-                  "fix": "Click 'Open Grok', type /mcps and press Enter, select Slack, press i to authenticate, and approve in the browser." if not slack else ""})
+    if want_slack:
+        steps.append({"id": "slack", "ok": slack, "optional": True, "title": "Slack connected (optional)",
+                      "fix": "Click 'Open Grok', type /mcps and press Enter, select Slack, press i to authenticate, and approve in the browser." if not slack else ""})
     gmail = bool(tok) and gmail_srv
+    if not gmail:
+        if not tok and gmail_auth._load_store():
+            gmail_fix = ("Gmail sign-in expired — Google's Testing-mode tokens last 7 days. "
+                         "In Terminal run:  python3 gmail_auth.py connect   (from the Open Loops folder), "
+                         "approve the Google account, then press Check again.")
+        elif not tok:
+            gmail_fix = ("Gmail needs a one-off Google sign-in of its own: follow 'Gmail with Grok' in INSTALL.md "
+                         "(create a Desktop-app OAuth client, save it as google_oauth_client.json in the app folder, "
+                         "then run: python3 gmail_auth.py connect).")
+        else:
+            gmail_fix = "Open Grok once in this folder and trust it, so it picks up the app's .grok/config.toml."
+    else:
+        gmail_fix = ""
     steps.append({"id": "gmail", "ok": gmail, "optional": True, "title": "Gmail connected (optional)",
-                  "fix": ("Gmail needs a one-off Google sign-in of its own: follow 'Gmail with Grok' in INSTALL.md "
-                          "(create a Desktop-app OAuth client, save it as google_oauth_client.json in the app folder, "
-                          "then run: python3 gmail_auth.py connect)." if not tok else
-                          "Open Grok once in this folder and trust it, so it picks up the app's .grok/config.toml.") if not gmail else ""})
+                  "fix": gmail_fix})
     return email, slack, gmail
 
 

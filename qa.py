@@ -12,7 +12,7 @@ from pathlib import Path
 
 SRC = Path(__file__).resolve().parent
 PORT = 8799
-FILES = ["app.py", "refresh.py", "chase.py", "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
+FILES = ["app.py", "standing.py", "close_standing.py", "refresh.py", "chase.py", "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
 t0 = time.time()
 
 
