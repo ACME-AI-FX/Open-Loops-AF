@@ -1,6 +1,6 @@
 """New-user walkthrough test.
 
-    python qa.py            # ~5 minutes; needs Claude Code signed in with Slack connected (Gmail optional)
+    python3 tests/qa.py            # ~5 minutes; needs Claude Code signed in with Slack connected (Gmail optional)
 
 Builds a throwaway install in a temp folder (exactly what setup.ps1 produces: config from template, empty
 state, nothing else), starts the app on a spare port, and drives the onboarding through the API the same way
@@ -10,9 +10,8 @@ real install. Exit code 0 = a brand-new user would get all the way to a populate
 import json, os, shutil, subprocess, sys, tempfile, time, urllib.request
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent
+REPO = Path(__file__).resolve().parent.parent
 PORT = 8799
-FILES = ["app.py", "standing.py", "close_standing.py", "refresh.py", "chase.py", "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
 t0 = time.time()
 
 
@@ -45,9 +44,9 @@ def check(cond, what):
 
 tmp = Path(tempfile.mkdtemp(prefix="openloops-qa-"))
 say(f"fresh install in {tmp}")
-for f in FILES:
-    shutil.copy(SRC / f, tmp / f)
-shutil.copytree(SRC / "scripts", tmp / "scripts")
+shutil.copytree(REPO / "openloops", tmp / "openloops")
+shutil.copy(REPO / "config.template.json", tmp / "config.template.json")
+shutil.copytree(REPO / "scripts", tmp / "scripts")
 # what setup.ps1 writes (BOM-free)
 tpl = json.loads((tmp / "config.template.json").read_text(encoding="utf-8-sig"))
 tpl["owner_name"] = "Testuser"
@@ -56,7 +55,7 @@ tpl["refresh_time"] = "09:15"
 (tmp / "state.json").write_text(json.dumps({"cursor": "2026-01-01T00:00", "last_refresh": None, "loops": []}), encoding="utf-8")
 
 env = dict(os.environ, OPENLOOPS_PORT=str(PORT))
-srv = subprocess.Popen([sys.executable, "app.py", "--no-browser"], cwd=tmp, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+srv = subprocess.Popen([sys.executable, "-m", "openloops.app", "--no-browser"], cwd=tmp, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     time.sleep(2)
     cfg = api("/api/config")

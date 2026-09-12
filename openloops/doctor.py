@@ -8,9 +8,8 @@ Which AI it checks comes from config.json "agent" (claude by default - see agent
 import json, re, shutil, subprocess, sys
 from pathlib import Path
 
-import agent
-
-ROOT = Path(__file__).resolve().parent
+from . import agent
+from .paths import ROOT
 CONFIG = ROOT / "config.json"
 WIN = sys.platform == "win32"
 
@@ -82,7 +81,7 @@ def grok_steps(steps):
 
     # Gmail: bundled gmail_mcp.py + gmail_auth.py. Slack: only if Settings → Use Slack.
     # Never probe Vercel. Named `mcp doctor gmail` so Slack is not started when opted out.
-    import gmail_auth
+    from . import gmail_auth
     tok = gmail_auth.token() if logged else None
     slack = gmail_srv = False
     want_slack = agent.use_slack()
@@ -108,12 +107,12 @@ def grok_steps(steps):
     if not gmail:
         if not tok and gmail_auth._load_store():
             gmail_fix = ("Gmail sign-in expired — Google's Testing-mode tokens last 7 days. "
-                         "In Terminal run:  python3 gmail_auth.py connect   (from the Open Loops folder), "
+                         "In Terminal run:  python3 -m openloops.gmail_auth connect   (from the Open Loops folder), "
                          "approve the Google account, then press Check again.")
         elif not tok:
             gmail_fix = ("Gmail needs a one-off Google sign-in of its own: follow 'Gmail with Grok' in INSTALL.md "
                          "(create a Desktop-app OAuth client, save it as google_oauth_client.json in the app folder, "
-                         "then run: python3 gmail_auth.py connect).")
+                         "then run: python3 -m openloops.gmail_auth connect).")
         else:
             gmail_fix = "Open Grok once in this folder and trust it, so it picks up the app's .grok/config.toml."
     else:

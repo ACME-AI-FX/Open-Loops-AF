@@ -17,15 +17,14 @@ if sys.platform != "darwin":
     print(f"SKIP: macOS-only test (Finder/launchd launch context) - nothing to do on {sys.platform}")
     sys.exit(0)
 
-SRC = Path(__file__).resolve().parent
-sys.path.insert(0, str(SRC))
-import doctor
+REPO = Path(__file__).resolve().parent.parent
+sys.path.insert(0, str(REPO))
+from openloops import doctor
 
 MINIMAL = "/usr/bin:/bin:/usr/sbin:/sbin"  # what launchd gives its children
 FIXED = f"{os.environ['HOME']}/.local/bin:/opt/homebrew/bin:/usr/local/bin:{MINIMAL}"
 PORT_INSTALL, PORT_LIVE = 8797, 8798
-FILES = ["app.py", "standing.py", "close_standing.py", "refresh.py", "chase.py", "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
-SHELL_FILES = ["doctor.py", "refresh.py", "chase.py", "voice.py", "people.py"]
+SHELL_FILES = ["openloops/doctor.py", "openloops/agent.py"]
 LABEL = "com.openloops.refresh"
 t0 = time.time()
 
@@ -91,7 +90,7 @@ try:
 
     say("1. shell=WIN regression - list args must all survive on POSIX")
     for name in SHELL_FILES:
-        code = "\n".join(ln.split("#")[0] for ln in (SRC / name).read_text().splitlines())
+        code = "\n".join(ln.split("#")[0] for ln in (REPO / name).read_text().splitlines())
         flags = re.findall(r"shell=(\w+)", code)
         check(flags and all(f == "WIN" for f in flags), f"{name}: every subprocess call uses shell=WIN")
     args = ["-p", "--output-format", "text", "--allowedTools", "mcp__plugin_slack_slack__slack_search_users"]
@@ -112,8 +111,8 @@ try:
         r = subprocess.run(["/bin/bash", str(frag)], env={"PATH": MINIMAL, "HOME": str(home)}, capture_output=True, text=True)
         check(r.returncode == 0, f"{label}: export makes claude resolvable under the minimal PATH")
 
-    path_export_works(SRC / "Open Loops.command", "Open Loops.command")
-    path_export_works(SRC / "scripts" / "run-refresh.sh", "scripts/run-refresh.sh")
+    path_export_works(REPO / "Open Loops.command", "Open Loops.command")
+    path_export_works(REPO / "scripts" / "run-refresh.sh", "scripts/run-refresh.sh")
 
     # throwaway install to get the Desktop launcher install.sh writes; launchctl is stubbed and the
     # held port makes the installer's nohup'd app.py exit by itself (port-busy branch)
@@ -122,7 +121,7 @@ try:
     hold.listen(1)
     inst_env = dict(os.environ, HOME=str(home), PATH=f"{fakebin}:{os.environ['PATH']}",
                     OPENLOOPS_PORT=str(PORT_INSTALL), BROWSER="/usr/bin/true")
-    r = subprocess.run(["bash", str(SRC / "install.sh"), "--name", "Testuser", "--at", "09:15"],
+    r = subprocess.run(["bash", str(REPO / "install.sh"), "--name", "Testuser", "--at", "09:15"],
                        env=inst_env, capture_output=True, text=True, timeout=180)
     check(r.returncode == 0, f"install.sh completed in throwaway HOME ({(r.stdout + r.stderr)[-200:].strip() if r.returncode else 'ok'})")
     check((home / "Library" / "LaunchAgents" / f"{LABEL}.plist").exists() and "bootstrap" in launchctl_log.read_text(),
@@ -138,9 +137,9 @@ try:
     say("3. live end-to-end - /api/doctor login row under broken then fixed PATH")
     app = tmp / "app"
     app.mkdir()
-    for f in FILES:
-        shutil.copy(SRC / f, app / f)
-    shutil.copytree(SRC / "scripts", app / "scripts")
+    shutil.copytree(REPO / "openloops", app / "openloops")
+    shutil.copy(REPO / "config.template.json", app / "config.template.json")
+    shutil.copytree(REPO / "scripts", app / "scripts")
     tpl = json.loads((app / "config.template.json").read_text(encoding="utf-8-sig"))
     tpl["owner_name"] = "Testuser"
     (app / "config.json").write_text(json.dumps(tpl, indent=2), encoding="utf-8")
@@ -149,7 +148,7 @@ try:
     base = {"HOME": os.environ["HOME"], "USER": os.environ.get("USER", ""), "LOGNAME": os.environ.get("LOGNAME", ""),
             "OPENLOOPS_PORT": str(PORT_LIVE), "BROWSER": "/usr/bin/true"}
 
-    srv = subprocess.Popen([sys.executable, "app.py", "--no-browser"], cwd=app, env=dict(base, PATH=MINIMAL),
+    srv = subprocess.Popen([sys.executable, "-m", "openloops.app", "--no-browser"], cwd=app, env=dict(base, PATH=MINIMAL),
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     wait_up()
     steps = {s["id"]: s for s in api("/api/doctor", {"force": True})["steps"]}
@@ -162,7 +161,7 @@ try:
     r = subprocess.run(["claude", "auth", "status"], env=env_fixed, capture_output=True, text=True, timeout=60)
     truth = bool(re.search(r'"loggedIn"\s*:\s*true', r.stdout + r.stderr))
     check(truth, "claude auth status reports signed in (this live check needs a signed-in machine)")
-    srv = subprocess.Popen([sys.executable, "app.py", "--no-browser"], cwd=app, env=env_fixed,
+    srv = subprocess.Popen([sys.executable, "-m", "openloops.app", "--no-browser"], cwd=app, env=env_fixed,
                            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     wait_up()
     steps = {s["id"]: s for s in api("/api/doctor", {"force": True})["steps"]}

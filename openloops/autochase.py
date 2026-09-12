@@ -9,7 +9,7 @@ import json, subprocess, sys
 from datetime import date, datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from .paths import ROOT
 STATE = ROOT / "state.json"
 CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8-sig"))
 
@@ -48,7 +48,7 @@ def main():
             due.append(l["id"])
     print(f"auto-chase: {len(due)} due (after {after} workdays): {', '.join(due) or '-'}")
     for lid in due:
-        r = subprocess.run([sys.executable, "chase.py", lid], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        r = subprocess.run([sys.executable, "-m", "openloops.chase", lid], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
         print(f"  {lid}: rc={r.returncode} " + (r.stdout.strip().splitlines() or ["?"])[-1][:120])
 
 

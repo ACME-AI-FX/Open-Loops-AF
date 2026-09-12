@@ -12,7 +12,7 @@ JSON-RPC on stdin/stdout; never print to stdout here except protocol replies.
 import base64, json, sys, urllib.error, urllib.parse, urllib.request
 from email.message import EmailMessage
 
-import gmail_auth
+from . import gmail_auth
 
 API = "https://gmail.googleapis.com/gmail/v1/users/me"
 BODY_CAP = 4000  # chars of message body returned per message
@@ -44,7 +44,7 @@ TOOLS = [
 def api(path, payload=None):
     tok = gmail_auth.token()
     if not tok:
-        raise RuntimeError("Gmail not connected - run: python3 gmail_auth.py connect")
+        raise RuntimeError("Gmail not connected - run: python3 -m openloops.gmail_auth connect")
     req = urllib.request.Request(f"{API}/{path}", json.dumps(payload).encode() if payload else None,
                                  {"Authorization": f"Bearer {tok}", "Content-Type": "application/json"})
     try:

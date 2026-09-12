@@ -10,9 +10,8 @@ import json, re, sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import agent
-
-ROOT = Path(__file__).resolve().parent
+from . import agent
+from .paths import ROOT
 CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8-sig"))
 OUT = ROOT / "people_suggested.json"
 LOG = ROOT / "state" / "logs"

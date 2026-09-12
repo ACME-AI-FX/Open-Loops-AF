@@ -8,7 +8,7 @@ import hashlib, json, re
 from datetime import date, datetime
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from .paths import ROOT
 CONFIG = ROOT / "config.json"
 ITEM_RE = re.compile(
     r"^- \[([ x-])\] (A\d+) \| ([^|]+?) \| (.+?) \| added (\d{4}-\d{2}-\d{2})(.*)$"

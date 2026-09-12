@@ -9,17 +9,17 @@ One-off setup (see INSTALL.md "Gmail with Grok"):
   1. In Google Cloud Console create an OAuth client of type "Desktop app",
      enable the Gmail API, and add yourself as a test user.
   2. Download its JSON and save it as  google_oauth_client.json  in this folder.
-  3. Run:  python3 gmail_auth.py connect   (opens your browser once)
+  3. Run:  python3 -m openloops.gmail_auth connect   (opens your browser once)
 
-    python3 gmail_auth.py connect   -> browser sign-in, stores a refresh token
-    python3 gmail_auth.py token     -> prints a valid access token (auto-refreshes)
-    python3 gmail_auth.py status    -> {"connected": true/false, "email": ...}
+    python3 -m openloops.gmail_auth connect   -> browser sign-in, stores a refresh token
+    python3 -m openloops.gmail_auth token     -> prints a valid access token (auto-refreshes)
+    python3 -m openloops.gmail_auth status    -> {"connected": true/false, "email": ...}
 """
 import base64, hashlib, json, secrets, sys, time, urllib.parse, urllib.request, webbrowser
 from http.server import BaseHTTPRequestHandler, HTTPServer
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from .paths import ROOT
 CLIENT = ROOT / "google_oauth_client.json"
 STORE = ROOT / "state" / "google_oauth.json"
 SCOPES = "https://www.googleapis.com/auth/gmail.modify openid email"

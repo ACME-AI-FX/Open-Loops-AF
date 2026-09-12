@@ -8,10 +8,9 @@ Reads state/standing-close.json written by app.py.
 import json, os, re, sys
 from pathlib import Path
 
-import agent
-import standing
-
-ROOT = Path(__file__).resolve().parent
+from . import agent
+from . import standing
+from .paths import ROOT
 PAYLOAD = ROOT / "state" / "standing-close.json"
 
 PROMPT = """UNATTENDED RUN - nobody can answer questions. Output only the JSON block.

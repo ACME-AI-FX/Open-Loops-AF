@@ -8,9 +8,8 @@ import json, re, sys
 from datetime import datetime, timedelta
 from pathlib import Path
 
-import agent
-
-ROOT = Path(__file__).resolve().parent
+from . import agent
+from .paths import ROOT
 STATE = ROOT / "state.json"
 LOG = ROOT / "state" / "logs"
 LOG.mkdir(parents=True, exist_ok=True)

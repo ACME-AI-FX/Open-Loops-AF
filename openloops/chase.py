@@ -1,6 +1,6 @@
 """Create a chase DRAFT for one loop via a headless agent run (agent.py). Never sends.
 
-    python chase.py <loop id>
+    python3 -m openloops.chase <loop id>
 
 Driven by config.json:
   chase_external_email  if false, external email loops are skipped
@@ -10,9 +10,8 @@ import json, sys
 from datetime import datetime
 from pathlib import Path
 
-import agent
-
-ROOT = Path(__file__).resolve().parent
+from . import agent
+from .paths import ROOT
 STATE = ROOT / "state.json"
 CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8-sig"))
 VOICE = json.loads((ROOT / "voice.json").read_text(encoding="utf-8-sig")) if (ROOT / "voice.json").exists() else {}

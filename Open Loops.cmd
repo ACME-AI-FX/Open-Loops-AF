@@ -4,10 +4,10 @@ rem   Not installed yet?  -> runs the installer (setup.ps1), which puts Open Loo
 rem                          and an icon on your Desktop.
 rem   Already installed?  -> starts it (hidden, no console window) and opens the page in your browser.
 setlocal
-set "APP=%LOCALAPPDATA%\OpenLoops\app.py"
+set "APP=%LOCALAPPDATA%\OpenLoops\openloops\app.py"
 if exist "%APP%" (
     cd /d "%LOCALAPPDATA%\OpenLoops"
-    start "" pythonw app.py
+    start "" pythonw -m openloops.app
     exit /b 0
 )
 echo Installing Open Loops...

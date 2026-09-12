@@ -45,7 +45,7 @@ Google sign-in itself (`gmail_auth.py`) and ships its own tiny Gmail MCP server 
    enable the **Gmail API**; on the **OAuth consent screen** add yourself as a **test user**; under **Credentials**
    create an **OAuth client ID** of type **Desktop app** and download its JSON.
 2. Save that file as `google_oauth_client.json` in the app folder.
-3. Run `python3 gmail_auth.py connect` (Windows: `python gmail_auth.py connect`) and approve in the browser —
+3. Run `python3 -m openloops.gmail_auth connect` (Windows: `python -m openloops.gmail_auth connect`) from the Open Loops folder and approve in the browser —
    pick the Gmail account Open Loops should read.
 4. Open Grok once in the app folder and trust it, so it reads the app's `.grok/config.toml`.
 
@@ -75,7 +75,7 @@ always drafts even if *Send* is ticked; Slack sending still works.
    `config.people`, then runs *Learn my tone* (`voice.py`) and the first refresh automatically.
 4. Everything else (name, refresh time, domains, sending, timer) is in ⚙ Settings — no file editing needed.
 
-Manual equivalents, for support: `python doctor.py`, `python people.py`, `python voice.py`, `python refresh.py`,
+Manual equivalents, for support: `python -m openloops.doctor`, `python -m openloops.people`, `python -m openloops.voice`, `python -m openloops.refresh`,
 `scripts\register-task.ps1 -At HH:MM` (`-Remove` to delete the task) on Windows, or
 `scripts/register-task.sh --at HH:MM` (`--remove` to delete the agent) on Mac.
 
@@ -129,16 +129,16 @@ that can do those two things and mentioning it in `refresh.py`'s prompt and `ALL
 ## 6. Files
 
 ```
-app.py            local web page (stdlib http.server, port 8765, exits after 3h idle)
-refresh.py        collector: new asks + reply detection  -> state.json
-chase.py          draft a nudge for one loop (tone-aware)
-voice.py          learn per-person writing style          -> voice.json
-config.json       settings (edited from the page)
-state.json        the loops
-index.html        the page
-scripts/          run-refresh.ps1, register-task.ps1 (Windows, Task Scheduler)
-                   run-refresh.sh, register-task.sh (Mac, launchd)
-                   macos-app.sh (builds Open Loops.app with the logo)
-docs/             logo + GitHub Pages site; AppIcon.icns is the Mac Dock icon
+openloops/        the app (python3 -m openloops.app)
+  app.py          local web page (port 8765)
+  refresh.py      new asks + reply detection → state.json
+  chase.py        draft a nudge for one loop
+  voice.py        learn writing style → voice.json
+  index.html      the page
+tests/            qa.py and unit tests
+scripts/          weekday refresh (Task Scheduler / launchd) + macos-app.sh
+docs/             logo, screenshot, GitHub Pages, Mac Dock icon
+config.json       your settings (gitignored, next to the folder root)
+state.json        your list (gitignored)
 state/logs/       one log per run
 ```

@@ -76,14 +76,14 @@ PLIST
 cat > "$MACOS/openloops" <<LAUNCH
 #!/bin/bash
 export PATH="\$HOME/.local/bin:/opt/homebrew/bin:/usr/local/bin:\$PATH"
-APP="$APP_DIR/app.py"
+APP="$APP_DIR/openloops/app.py"
 if [ ! -f "\$APP" ]; then
     osascript -e 'display alert "Open Loops" message "Open Loops is not installed yet. Double-click Open Loops.command in the folder you downloaded, once."' >/dev/null 2>&1 || true
     exit 1
 fi
 cd "$APP_DIR"
 # Don't exec: replacing the process with python3 makes the Dock show Python's icon.
-python3 app.py
+python3 -m openloops.app
 LAUNCH
 chmod +x "$MACOS/openloops"
 xattr -d com.apple.quarantine "$OUT" 2>/dev/null || true

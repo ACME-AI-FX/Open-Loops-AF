@@ -11,7 +11,7 @@ CLI defaults to xhigh. Gmail is the bundled gmail_mcp.py server (not Claude's co
 import json, os, shutil, subprocess, sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from .paths import ROOT
 WIN = sys.platform == "win32"
 _GROK_JOB_HOME = ROOT / "state" / "grok-home"
 

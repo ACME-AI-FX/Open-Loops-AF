@@ -129,7 +129,7 @@ ok "Will refresh itself weekdays at $AT"
 # ---------- 6. Open it ----------
 say "Opening Open Loops - it will guide you through connecting Slack and email."
 cd "$DEST"
-nohup python3 app.py >/dev/null 2>&1 &
+nohup python3 -m openloops.app >/dev/null 2>&1 &
 disown
 echo ""
 echo "  Done. You can close this window."

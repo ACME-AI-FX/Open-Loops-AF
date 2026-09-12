@@ -84,7 +84,7 @@ $pyw  = (Get-Command pythonw -ErrorAction SilentlyContinue).Source
 if (-not $pyw) { $pyw = (Get-Command python).Source }
 $ws = New-Object -ComObject WScript.Shell
 $s = $ws.CreateShortcut((Join-Path $desk "Open Loops.lnk"))
-$s.TargetPath = $pyw; $s.Arguments = "`"$Dest\app.py`""; $s.WorkingDirectory = $Dest
+$s.TargetPath = $pyw; $s.Arguments = "-m openloops.app"; $s.WorkingDirectory = $Dest
 $s.IconLocation = "%SystemRoot%\System32\shell32.dll,44"; $s.Description = "Open Loops - who owes you a reply"; $s.Save()
 Ok "Desktop icon created"
 
@@ -94,7 +94,7 @@ Ok "Will refresh itself weekdays at $At"
 
 # ---------- 6. Open it ----------
 Say "Opening Open Loops - it will guide you through connecting Slack and email."
-Start-Process -FilePath $pyw -ArgumentList "`"$Dest\app.py`"" -WorkingDirectory $Dest
+Start-Process -FilePath $pyw -ArgumentList "-m openloops.app" -WorkingDirectory $Dest
 Write-Host ""
 Write-Host "  Done. You can close this window." -ForegroundColor Green
 Write-Host ""

@@ -1,14 +1,12 @@
 """Standing-items.md round-trip: list, compulsory closure, vault cards on Home.
 
-    python3 test_standing.py    # fast; no Slack/Gmail. Temp vault + temp install.
+    python3 tests/test_standing.py    # fast; no Slack/Gmail. Temp vault + temp install.
 """
 import json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent
+REPO = Path(__file__).resolve().parent.parent
 PORT = 8795
-FILES = ["app.py", "standing.py", "close_standing.py", "agent.py", "refresh.py", "chase.py",
-         "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
 SAMPLE = """---
 title: Standing Items
 type: standing-items
@@ -63,8 +61,8 @@ vault = tmp / "vault"
 (vault / "02-Research" / "standing-items.md").write_text(SAMPLE, encoding="utf-8")
 app = tmp / "app"
 app.mkdir()
-for f in FILES:
-    shutil.copy(SRC / f, app / f)
+shutil.copytree(REPO / "openloops", app / "openloops")
+shutil.copy(REPO / "config.template.json", app / "config.template.json")
 tpl = json.loads((app / "config.template.json").read_text(encoding="utf-8-sig"))
 tpl["owner_name"] = "Oscar"
 tpl["vault_path"] = str(vault)
@@ -74,7 +72,7 @@ tpl["vault_path"] = str(vault)
 }), encoding="utf-8")
 
 env = dict(os.environ, OPENLOOPS_PORT=str(PORT), OPENLOOPS_SKIP_AGENT="1")
-srv = subprocess.Popen([sys.executable, "app.py", "--no-browser"], cwd=app, env=env,
+srv = subprocess.Popen([sys.executable, "-m", "openloops.app", "--no-browser"], cwd=app, env=env,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     for _ in range(40):
@@ -82,7 +80,7 @@ try:
             break
         time.sleep(0.1)
     else:
-        raise SystemExit("FAIL: app.py did not come up")
+        raise SystemExit("FAIL: openloops.app did not come up")
 
     loops = api("/api/state")[1]["state"]["loops"]
     ids = {l["id"] for l in loops}
@@ -116,7 +114,7 @@ try:
     ids = {l["id"] for l in api("/api/state")[1]["state"]["loops"]}
     check("vault-A6" not in ids and "vault-A7" in ids, "closed item leaves Needs me; others stay")
 
-    html = (app / "index.html").read_text(encoding="utf-8")
+    html = (app / "openloops" / "index.html").read_text(encoding="utf-8")
     check("closeVault(" in html and "How are you closing" in html and "close_ok" in html,
           "Home tab has the compulsory close popup")
 finally:

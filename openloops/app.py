@@ -1,15 +1,15 @@
 """Open Loops - tiny local web app. stdlib only.
 
-    python app.py            -> http://localhost:8765
+    python3 -m openloops.app            -> http://localhost:8765
 """
 import json, re, shlex, socket, subprocess, sys, threading, time, webbrowser
 from datetime import date, datetime
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent
+from .paths import PKG, ROOT
 STATE = ROOT / "state.json"
-INDEX = ROOT / "index.html"
+INDEX = PKG / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
 EDITABLE = ("agent", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path")
@@ -56,13 +56,16 @@ def save(s):
     STATE.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def run_job(name, args):
+JOB_MOD = {"refresh": "refresh", "chase": "chase", "voice": "voice", "people": "people", "standing": "close_standing"}
+
+def run_job(name, extra=None):
     if jobs[name]["running"]:
         return False
     jobs[name] = {"running": True, "log": ""}
+    args = [sys.executable, "-m", f"openloops.{JOB_MOD[name]}", *(extra or [])]
 
     def go():
-        p = subprocess.run([sys.executable, *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+        p = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
         jobs[name] = {"running": False, "log": (p.stdout + p.stderr)[-4000:], "rc": p.returncode}
 
     threading.Thread(target=go, daemon=True).start()
@@ -92,7 +95,7 @@ class H(BaseHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(b)
         elif self.path == "/api/state":
-            import standing
+            from . import standing
             s = load()
             s = dict(s)
             vault_loops, dirty = standing.as_loops(s)
@@ -112,12 +115,12 @@ class H(BaseHTTPRequestHandler):
         n = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(n) or b"{}")
         if self.path == "/api/refresh":
-            return self._json({"started": run_job("refresh", ["refresh.py"])})
+            return self._json({"started": run_job("refresh")})
         if self.path == "/api/doctor":
             import time as _t
             if body.get("force") or _t.time() - doctor_cache["at"] > 55:
-                args = ["doctor.py"] + (["--detect"] if body.get("detect") else [])
-                r = subprocess.run([sys.executable, *args], cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+                args = [sys.executable, "-m", "openloops.doctor"] + (["--detect"] if body.get("detect") else [])
+                r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
                 try:
                     doctor_cache = {"at": _t.time(), "result": json.loads(r.stdout.strip().splitlines()[-1])}
                 except Exception:
@@ -125,7 +128,7 @@ class H(BaseHTTPRequestHandler):
             return self._json(doctor_cache["result"])
         if self.path == "/api/open-claude":
             # opens a terminal running the configured agent so the user can sign in / connect
-            import agent
+            from . import agent
             cli, title = agent.cli(), agent.display_name()
             if WIN:
                 subprocess.Popen(f'start "{title}" cmd /k "{cli}"', shell=True, cwd=ROOT)
@@ -153,9 +156,9 @@ class H(BaseHTTPRequestHandler):
                 CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
             return self._json({"ok": r.returncode == 0, "out": (r.stdout + r.stderr)[-500:]})
         if self.path == "/api/voice":
-            return self._json({"started": run_job("voice", ["voice.py"])})
+            return self._json({"started": run_job("voice")})
         if self.path == "/api/people":
-            return self._json({"started": run_job("people", ["people.py"])})
+            return self._json({"started": run_job("people")})
         if self.path == "/api/config":
             cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
             for k, v in body.items():
@@ -176,13 +179,13 @@ class H(BaseHTTPRequestHandler):
             doctor_cache = {"at": 0, "result": None}
             return self._json({"ok": True})
         if self.path == "/api/chase":
-            return self._json({"started": run_job("chase", ["chase.py", body["id"]])})
+            return self._json({"started": run_job("chase", [body["id"]])})
         if self.path == "/api/action":
             s = load()
             act = body.get("action")
             vid = str(body.get("id") or "")
             if vid.startswith("vault-"):
-                import standing
+                from . import standing
                 item_id = vid.split("-", 1)[1].upper()
                 if act != "done":
                     return self._json({"error": "vault items are closed with done only"}, 400)
@@ -196,7 +199,7 @@ class H(BaseHTTPRequestHandler):
                     json.dumps({"id": item_id, "closure": closure,
                                 "project": closed["project"], "action": closed["action"]},
                                ensure_ascii=False), encoding="utf-8")
-                started = run_job("standing", ["close_standing.py"])
+                started = run_job("standing")
                 return self._json({"ok": True, "id": vid, "started": started})
             if act == "add":
                 owner = (body.get("owner") or "").strip()[:80]

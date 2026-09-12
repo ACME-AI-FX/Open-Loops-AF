@@ -15,10 +15,10 @@ if [ "$DOW" -ge 6 ]; then
 fi
 
 echo "=== refresh $(date +%H:%M:%S)" >> "$LOG"
-python3 refresh.py >> "$LOG" 2>&1
+python3 -m openloops.refresh >> "$LOG" 2>&1
 echo "refresh exit $?" >> "$LOG"
 
 # --- timer-driven chasing (no-op unless auto_chase.enabled in config.json) ---
 echo "=== autochase $(date +%H:%M:%S)" >> "$LOG"
-python3 autochase.py >> "$LOG" 2>&1
+python3 -m openloops.autochase >> "$LOG" 2>&1
 exit 0

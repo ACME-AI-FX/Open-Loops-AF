@@ -8,5 +8,5 @@
 # Relative path: works because Open Loops always runs Grok with --cwd set to this folder.
 [mcp_servers.gmail]
 command = "python3"
-args = ["gmail_mcp.py"]
+args = ["-m", "openloops.gmail_mcp"]
 enabled = true

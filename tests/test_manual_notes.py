@@ -1,6 +1,6 @@
 """API test for typed Needs-me reminders (contact + note).
 
-    python3 test_manual_notes.py    # fast; no Slack/Gmail. Temp install, spare port.
+    python3 tests/test_manual_notes.py    # fast; no Slack/Gmail. Temp install, spare port.
 
 Covers: add (contact from people list + free text), notes, reopen stays in Needs me,
 refresh.py skips these so the agent cannot close them.
@@ -8,9 +8,8 @@ refresh.py skips these so the agent cannot close them.
 import json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from pathlib import Path
 
-SRC = Path(__file__).resolve().parent
+REPO = Path(__file__).resolve().parent.parent
 PORT = 8796
-FILES = ["app.py", "standing.py", "refresh.py", "chase.py", "voice.py", "people.py", "doctor.py", "autochase.py", "index.html", "config.template.json"]
 t0 = time.time()
 
 
@@ -39,8 +38,8 @@ def api(path, body=None, method=None):
 
 tmp = Path(tempfile.mkdtemp(prefix="openloops-notes-"))
 say(f"fresh install in {tmp}")
-for f in FILES:
-    shutil.copy(SRC / f, tmp / f)
+shutil.copytree(REPO / "openloops", tmp / "openloops")
+shutil.copy(REPO / "config.template.json", tmp / "config.template.json")
 tpl = json.loads((tmp / "config.template.json").read_text(encoding="utf-8-sig"))
 tpl["owner_name"] = "Oscar"
 tpl["people"] = {"Alice Example": {"level": "peer", "aliases": ["Alice"], "email": "alice@example.com"}}
@@ -53,7 +52,7 @@ tpl["people"] = {"Alice Example": {"level": "peer", "aliases": ["Alice"], "email
 }), encoding="utf-8")
 
 env = dict(os.environ, OPENLOOPS_PORT=str(PORT))
-srv = subprocess.Popen([sys.executable, "app.py", "--no-browser"], cwd=tmp, env=env,
+srv = subprocess.Popen([sys.executable, "-m", "openloops.app", "--no-browser"], cwd=tmp, env=env,
                        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 try:
     for _ in range(40):
@@ -61,7 +60,7 @@ try:
             break
         time.sleep(0.1)
     else:
-        raise SystemExit("FAIL: app.py did not come up")
+        raise SystemExit("FAIL: openloops.app did not come up")
 
     code, err = api("/api/action", {"action": "add", "owner": "", "ask": ""})
     check(code == 400 and "something to do" in err.get("error", ""), "add without a task is 400")
@@ -100,13 +99,13 @@ try:
     note = next(l for l in api("/api/state")[1]["state"]["loops"] if l["id"] == note["id"])
     check(note["status"] == "needs_me", "reopen of a typed reminder goes back to Needs me, not Waiting")
 
-    src = (tmp / "refresh.py").read_text(encoding="utf-8")
+    src = (tmp / "openloops" / "refresh.py").read_text(encoding="utf-8")
     check('not in ("note", "vault")' in src and 'l.get("manual")' in src,
           "refresh.py skips typed reminders so the agent cannot close them")
-    chase_src = (tmp / "chase.py").read_text(encoding="utf-8")
+    chase_src = (tmp / "openloops" / "chase.py").read_text(encoding="utf-8")
     check('"note", "vault"' in chase_src, "chase.py refuses to nudge a typed reminder")
 
-    html = (tmp / "index.html").read_text(encoding="utf-8")
+    html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
     check('id="add_need"' in html and "addNeed()" in html and "editNote(" in html,
           "Home tab has the add form and a per-card note button")
 finally:
