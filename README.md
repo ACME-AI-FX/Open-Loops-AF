@@ -6,7 +6,7 @@
 
 <p align="center"><img src="docs/home.png" alt="Open Loops home: Needs me, Waiting on them, add a note"></p>
 
-Runs locally. Uses the Claude or Grok subscription you already have. No API keys.
+Runs locally. Uses the Claude or Grok subscription you already have. No API key costs.
 
 ## Why you want this
 
@@ -59,7 +59,7 @@ a reminder bot.
   are read only to check for a reply on a loop you already have.
 - **Drafts by default.** It sends only if you tick *Send to internal* / *Send to external*. The send tools
   are handed to the AI run only when those boxes are ticked, so with both off it cannot send.
-- **No API keys and no new accounts.** It drives the Claude or Grok CLI you are already signed in to.
+- **No API key costs and no new accounts.** It drives the Claude or Grok CLI you are already signed in to.
 - **Every run leaves a log** in `state/logs/`, so you can see what it looked at and what it decided.
 - **Open source, MIT licence.** Read it before you point it at your inbox.
 
