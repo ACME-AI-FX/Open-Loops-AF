@@ -1,6 +1,7 @@
 """Open Loops - tiny local web app. stdlib only.
 
     python3 -m openloops.app            -> http://localhost:8765
+                                           (or the next free port if 8765 is taken; OPENLOOPS_PORT overrides)
 """
 import json, re, shlex, socket, subprocess, sys, threading, time, webbrowser
 from datetime import date, datetime
@@ -73,6 +74,8 @@ def run_job(name, extra=None):
 
 
 class H(BaseHTTPRequestHandler):
+    server_version = "OpenLoops/1"  # sent as the Server: header - how the launcher recognises itself
+
     def log_message(self, *a):  # quiet
         pass
 
@@ -251,12 +254,38 @@ class H(BaseHTTPRequestHandler):
         self._json({"error": "not found"}, 404)
 
 
-def port_busy():
+def port_busy(port=None):
     with socket.socket() as sk:
-        return sk.connect_ex(("127.0.0.1", PORT)) == 0
+        return sk.connect_ex(("127.0.0.1", port or PORT)) == 0
+
+
+def already_running(port=None):
+    """True only if the thing listening on the port is Open Loops, not some other local server
+    (e.g. a stray `python -m http.server 8765`, which would otherwise show a directory listing)."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port or PORT}/", timeout=2) as r:
+            return r.headers.get("Server", "").startswith("OpenLoops")
+    except Exception:
+        return False
+
+
+def pick_port(start=None):
+    """Scan from the preferred port. Returns (port, running):
+    running=True  -> Open Loops already answers there (launched earlier), just open the page;
+    running=False -> the port is free, start there.
+    Ports held by other programs are skipped, so the app is never confused with a stray server."""
+    start = start or PORT
+    for p in range(start, start + 20):
+        if not port_busy(p):
+            return p, False
+        if already_running(p):
+            return p, True
+    raise SystemExit(f"Open Loops: no free port between {start} and {start + 19}; set OPENLOOPS_PORT")
 
 
 if __name__ == "__main__":
+    PORT, running = pick_port()
     url = f"http://localhost:{PORT}"
     def open_browser():
         # os.startfile uses the Windows default-browser association, which works whether or not
@@ -267,11 +296,15 @@ if __name__ == "__main__":
         except Exception:
             webbrowser.open(url)
 
-    if port_busy():  # already running (e.g. launched earlier today) - just open the page
-        open_browser()
+    if running:  # launched earlier today - just open the page
+        print("Open Loops (already running) ->", url)
+        if "--no-browser" not in sys.argv:
+            open_browser()
         sys.exit(0)
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     print("Open Loops ->", url)
+    if str(PORT) != os.environ.get("OPENLOOPS_PORT", "8765"):
+        print(f"(preferred port was taken by another program; set OPENLOOPS_PORT to choose)")
     if "--no-browser" not in sys.argv:
         threading.Timer(1.0, open_browser).start()
 
