@@ -73,6 +73,8 @@ def run_job(name, extra=None):
 
 
 class H(BaseHTTPRequestHandler):
+    server_version = "OpenLoops/1"  # sent as the Server: header - how the launcher recognises itself
+
     def log_message(self, *a):  # quiet
         pass
 
@@ -251,12 +253,35 @@ class H(BaseHTTPRequestHandler):
         self._json({"error": "not found"}, 404)
 
 
-def port_busy():
+def port_busy(port=None):
     with socket.socket() as sk:
-        return sk.connect_ex(("127.0.0.1", PORT)) == 0
+        return sk.connect_ex(("127.0.0.1", port or PORT)) == 0
+
+
+def already_running(port=None):
+    """True only if the thing listening on the port is Open Loops, not some other local server
+    (e.g. a stray `python -m http.server 8765`, which would otherwise show a directory listing)."""
+    import urllib.request
+    try:
+        with urllib.request.urlopen(f"http://127.0.0.1:{port or PORT}/", timeout=2) as r:
+            return r.headers.get("Server", "").startswith("OpenLoops")
+    except Exception:
+        return False
+
+
+def free_port(start):
+    for p in range(start, start + 20):
+        if not port_busy(p):
+            return p
+    raise SystemExit(f"Open Loops: no free port between {start} and {start + 19}")
 
 
 if __name__ == "__main__":
+    if not already_running() and port_busy():
+        taken = PORT
+        PORT = free_port(PORT + 1)
+        print(f"Open Loops: port {taken} is used by another program; using {PORT} instead "
+              f"(set OPENLOOPS_PORT to choose).")
     url = f"http://localhost:{PORT}"
     def open_browser():
         # os.startfile uses the Windows default-browser association, which works whether or not
@@ -267,7 +292,7 @@ if __name__ == "__main__":
         except Exception:
             webbrowser.open(url)
 
-    if port_busy():  # already running (e.g. launched earlier today) - just open the page
+    if already_running():  # launched earlier today - just open the page
         open_browser()
         sys.exit(0)
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
