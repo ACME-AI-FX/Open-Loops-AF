@@ -293,7 +293,8 @@ if __name__ == "__main__":
             webbrowser.open(url)
 
     if already_running():  # launched earlier today - just open the page
-        open_browser()
+        if "--no-browser" not in sys.argv:
+            open_browser()
         sys.exit(0)
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     print("Open Loops ->", url)
