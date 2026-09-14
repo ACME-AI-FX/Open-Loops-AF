@@ -7,7 +7,8 @@ port made the launcher think Open Loops was already running, so double-clicking 
 "Directory listing for /" page instead of the app.
 
   1. Something else on the port -> Open Loops must start on the next free port, not exit.
-  2. Open Loops itself on the port -> a second launch must recognise it (Server: OpenLoops) and exit 0.
+  2. Stray still there and Open Loops on the next port -> relaunching must find the running instance
+     (Server: OpenLoops) and exit 0 instead of starting a third server.
 Builds a fresh install in a temp folder and cleans up. Exit code 0 = both hold.
 """
 import http.server, json, os, shutil, socket, subprocess, sys, tempfile, threading, time, urllib.request
@@ -69,10 +70,9 @@ try:
     check(wait_for(PORT + 1), "Open Loops moved to the next free port instead of quitting")
     check(server_header(PORT + 1).startswith("OpenLoops"), "Server: OpenLoops header identifies the app")
     check(app.poll() is None, "Open Loops is still serving (did not mistake the stray for itself)")
-    stray.shutdown(); stray.server_close()
 
-    # 2. Open Loops already on the port: a second launch must recognise it and exit 0 (no port hop).
-    env["OPENLOOPS_PORT"] = str(PORT + 1)
+    # 2. Stray still on the preferred port, Open Loops on the next one: relaunching with the same
+    #    preferred port must find the running instance and exit 0, not start a third server.
     app2 = launch()
     try:
         out, _ = app2.communicate(timeout=15)
@@ -81,6 +81,8 @@ try:
         raise SystemExit("FAIL: second launch did not exit when Open Loops was already running")
     check(app2.returncode == 0, "second launch exits 0 when Open Loops already owns the port")
     check(not listening(PORT + 2), "second launch did not start a duplicate server on another port")
+    check("localhost" in out, "second launch printed the page address")
+    stray.shutdown(); stray.server_close()
     say("PASS")
 finally:
     for p in (app, app2):

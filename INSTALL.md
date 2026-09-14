@@ -82,6 +82,8 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 ## 3. Daily use
 
 - Double-click **Open Loops** → page opens at http://localhost:8765 (already refreshed by the morning job).
+  If another program already uses port 8765, Open Loops picks the next free port and opens the browser
+  there instead; set `OPENLOOPS_PORT` if you want a fixed one.
 - **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
 - **done / snooze / reopen** are local only. Recently-closed loops are still watched for 5 days and reopen if the person comes back with a new question.
@@ -130,7 +132,7 @@ that can do those two things and mentioning it in `refresh.py`'s prompt and `ALL
 
 ```
 openloops/        the app (python3 -m openloops.app)
-  app.py          local web page (port 8765)
+  app.py          local web page (port 8765, or the next free port if that is taken)
   refresh.py      new asks + reply detection → state.json
   chase.py        draft a nudge for one loop
   voice.py        learn writing style → voice.json
