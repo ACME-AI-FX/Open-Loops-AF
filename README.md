@@ -74,11 +74,30 @@ What is planned next: [ROADMAP.md](ROADMAP.md).
 
 MIT licence. WhatsApp is not possible (no API for personal accounts).
 
+## Running from a checkout (developers)
+
+The installed copy lives in `%LOCALAPPDATA%\OpenLoops` (Mac: `~/Documents/OpenLoops`) and answers on port 8765.
+A git checkout is a second, separate copy with its own gitignored `config.json` and `state.json`. From the
+checkout folder, in any terminal (needs Node for the `npm` wrapper, nothing is installed):
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | start this checkout on http://localhost:8766 and open the browser (never collides with the installed copy) |
+| `npm run stop` | stop it, same as closing its tab |
+| `npm test` | every `tests/test_*.py`, with a summary |
+| `npm run doctor` | the connection checklist with Slack / Miro route detection |
+| `npm run refresh` | one refresh job in the foreground (`-- --slack-only` for the quick pass) |
+| `npm run setup` | install or upgrade the installed copy from this checkout (keeps its config and state) |
+
+Anything after `--` is passed through, e.g. `npm run dev -- --no-browser`. Without Node:
+`python -m openloops.app --port 8766`, `python -m openloops.app --stop --port 8766`, `python tests/run_all.py`.
+
 ## What's in the folder
 
 | Path | What it does |
 |---|---|
-| `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`; `--stop` quits a running one, as does closing the tab) |
+| `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`; `--port N` to choose, `--stop` quits a running one, as does closing the tab) |
+| `package.json`, `scripts/loops.mjs` | `npm run dev` / `stop` / `test` / `doctor` / `refresh` / `setup` for a checkout (no npm packages) |
 | `openloops/refresh.py` | finds new asks, checks open threads for replies (`--slack-only` for a quick Slack pass) |
 | `openloops/chase.py` · `autochase.py` | drafts (or, if you tick the boxes, sends) a nudge; the optional timer |
 | `openloops/voice.py` · `people.py` | learns how you write to each person; finds who you talk to most |

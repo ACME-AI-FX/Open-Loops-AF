@@ -68,3 +68,7 @@ __pycache__/
 *~
 .venv/
 venv/
+
+# ---- npm wrapper (no dependencies are ever installed, but just in case) ----
+node_modules/
+package-lock.json

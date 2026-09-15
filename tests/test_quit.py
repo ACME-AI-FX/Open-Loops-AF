@@ -105,6 +105,18 @@ try:
     r = subprocess.run([sys.executable, "-m", "openloops.app", "--stop"], cwd=tmp, env=env, capture_output=True, text=True)
     check(r.returncode == 1 and "not running" in r.stdout, "--stop with nothing running says so and exits 1")
 
+    # 5. --port beats the environment (what `npm run dev` / `npm run stop` use)
+    p = subprocess.Popen([sys.executable, "-m", "openloops.app", "--no-browser", "--port", str(PORT + 1)], cwd=tmp,
+                         env=dict(os.environ, OPENLOOPS_PORT="1"), stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    procs.append(p)
+    for _ in range(50):
+        if socket.socket().connect_ex(("127.0.0.1", PORT + 1)) == 0:
+            break
+        time.sleep(0.1)
+    check(socket.socket().connect_ex(("127.0.0.1", PORT + 1)) == 0, "--port N starts on N even with OPENLOOPS_PORT set")
+    r = subprocess.run([sys.executable, "-m", "openloops.app", "--stop", f"--port={PORT + 1}"], cwd=tmp, capture_output=True, text=True)
+    check(r.returncode == 0 and gone(p, 10), "--stop --port=N stops that instance")
+
     # page wiring
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
     for needle in ("'X-OL-Page':PAGE", "sendBeacon('/api/bye'", 'id="quitbtn"', "e.persisted"):

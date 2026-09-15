@@ -1,0 +1,13 @@
+{
+  "name": "open-loops",
+  "private": true,
+  "description": "Developer commands for a git checkout. The app itself is stdlib Python; nothing here is installed by npm.",
+  "scripts": {
+    "dev": "node scripts/loops.mjs dev",
+    "stop": "node scripts/loops.mjs stop",
+    "test": "node scripts/loops.mjs test",
+    "doctor": "node scripts/loops.mjs doctor",
+    "refresh": "node scripts/loops.mjs refresh",
+    "setup": "node scripts/loops.mjs setup"
+  }
+}

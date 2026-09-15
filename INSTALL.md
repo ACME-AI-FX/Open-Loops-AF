@@ -192,7 +192,8 @@ state/logs/       one log per run
    to one Miro team.
 3. **Second launch only opens the browser.** If Open Loops is already running, double-clicking the icon just opens the
    page. After editing anything in `openloops/`, close the tab (the app stops a few seconds later) or run
-   `python -m openloops.app --stop`, then launch again. If you reopen the page within those few seconds the app simply
+   `python -m openloops.app --stop`, then launch again. Developers: run a checkout side by side with the installed
+   copy using `npm run dev` (port 8766) and `npm run stop`; see "Running from a checkout" in README.md. If you reopen the page within those few seconds the app simply
    carries on; a reload never stops it.
 4. **UTF-8 BOM.** PowerShell tends to write a BOM at the start of JSON files. Every reader in the app uses `utf-8-sig`
    and the installer writes without a BOM; keep both if you add scripts.
