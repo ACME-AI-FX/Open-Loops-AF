@@ -3,10 +3,11 @@ rem Open Loops - double-click me.
 rem   Not installed yet?  -> runs the installer (setup.ps1), which puts Open Loops in %LOCALAPPDATA%\OpenLoops
 rem                          and an icon on your Desktop.
 rem   Already installed?  -> starts it (hidden, no console window) and opens the page in your browser.
-rem   (If this file sits inside an installed copy - e.g. one made by OpenLoops-Setup.exe - it runs that copy.)
+rem   (If this file sits inside an installed copy - e.g. one made by OpenLoops-Setup.exe - it runs that copy.
+rem    A git checkout is never an installed copy: developers use `npm run dev` on port 8766, see CONTRIBUTING.md.)
 setlocal
 set "HERE=%~dp0"
-if exist "%HERE%openloops\app.py" if exist "%HERE%config.json" (
+if exist "%HERE%openloops\app.py" if exist "%HERE%config.json" if not exist "%HERE%.git" (
     cd /d "%HERE%"
     start "" pythonw -m openloops.app
     exit /b 0
