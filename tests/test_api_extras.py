@@ -159,7 +159,12 @@ try:
         r = subprocess.run([sys.executable, "-c", "from openloops import agent; print(' '.join(agent.claude_args(['slack.read_channel'])))"],
                            cwd=tmp, capture_output=True, text=True)
         return r.stdout.strip()
-    check("--model sonnet" in claude_cmd(), "fresh install runs the jobs on sonnet (template default)")
+    check("--model sonnet" in claude_cmd() and "--effort xhigh" in claude_cmd(), "fresh install runs the jobs on sonnet at xhigh (template default)")
+    api("/api/config", {"model": "opus", "effort": "medium"})
+    check(claude_cmd().endswith("--model opus --effort medium"), "model + effort from Settings reach the claude command line")
+    api("/api/config", {"effort": ""})
+    check("--effort" not in claude_cmd(), "blank effort -> no --effort flag")
+    api("/api/config", {"effort": "xhigh"})
     api("/api/config", {"model": "haiku"})
     check(claude_cmd().endswith("--model haiku"), "model from Settings reaches the claude command line")
     api("/api/config", {"model": ""})
@@ -169,7 +174,7 @@ try:
     # ---- page has the new controls
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
     check("x.id==='self'&&x.ok" in html, "Update Slack is shown only when Slack is connected and the owner's id is known")
-    for needle in ('id="uslack"', 'id="cfg_model"', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
+    for needle in ('id="uslack"', 'id="cfg_model"', 'id="cfg_effort"', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
         check(needle in html, f"page has {needle}")
     say("ALL OK")
 finally:

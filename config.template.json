@@ -1,6 +1,7 @@
 {
   "agent": "claude",
   "model": "sonnet",
+  "effort": "xhigh",
   "history_days": 30,
   "owner_name": "",
   "use_slack": false,

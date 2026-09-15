@@ -14,7 +14,7 @@ STATE = ROOT / "state.json"
 INDEX = PKG / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
-EDITABLE = ("agent", "model", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "slack_source", "miro_source", "roadmap_board", "roadmap_frame")
+EDITABLE = ("agent", "model", "effort", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "slack_source", "miro_source", "roadmap_board", "roadmap_frame")
 import os
 PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
 WIN = sys.platform == "win32"

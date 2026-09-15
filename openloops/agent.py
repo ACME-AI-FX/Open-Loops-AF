@@ -130,10 +130,18 @@ def model():
     return str(_cfg().get("model") or "").strip()
 
 
+def effort():
+    """config.json "effort": low | medium | high | xhigh | max, how hard the model thinks per turn.
+    Template: xhigh with sonnet (opus at medium is the other sensible pairing). Blank = CLI default."""
+    return str(_cfg().get("effort") or "").strip().lower()
+
+
 def claude_args(tools):
     args = ["claude", "-p", "--output-format", "text", "--allowedTools", ",".join(_qualify(tools))]
     if model():
         args += ["--model", model()]
+    if effort():
+        args += ["--effort", effort()]
     return args
 
 

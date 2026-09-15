@@ -188,8 +188,9 @@ state/logs/       one log per run
    and the installer writes without a BOM; keep both if you add scripts.
 5. **OneDrive / Dropbox folders** lock files while syncing. Install to the default `%LOCALAPPDATA%\OpenLoops`, not a
    synced folder.
-6. **Which model the jobs use.** Every job runs `claude -p` with `--model` from `model` in `config.json`
-   (template: `sonnet`; Settings → Your AI → Model). Leave it blank and the jobs inherit whatever `claude` defaults
-   to on that computer, which is usually the most expensive model available. Grok ignores the setting.
+6. **Which model the jobs use.** Every job runs `claude -p` with `--model` and `--effort` from `model` and
+   `effort` in `config.json` (template: `sonnet` at `xhigh`; Settings → Your AI). Sonnet at xhigh or Opus at medium
+   both do the job. Leave either blank and the jobs inherit whatever `claude` defaults to on that computer, which
+   is usually the most expensive model available. Grok ignores both.
 7. **Jobs never clobber your clicks.** A refresh can run for minutes; anything you add or snooze meanwhile is kept
    because every job re-reads `state.json` just before writing (`store.update_state`).
