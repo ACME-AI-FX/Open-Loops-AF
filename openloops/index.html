@@ -449,7 +449,7 @@ async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
 function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_use_slack').checked=!!C.use_slack;$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
  if($('#cfg_vault'))$('#cfg_vault').value=C.vault_path||'';
  $('#cfg_rm_board').value=C.roadmap_board||'';$('#cfg_rm_frame').value=C.roadmap_frame||'';
- $('#cfg_slack_src').textContent=(C.agent||'claude')==='claude'&&C.slack_source?'Slack route detected: '+(C.slack_source==='connector'?'claude.ai connector':'Slack plugin')+' — the refresh uses the matching tools automatically.':'';
+ $('#cfg_slack_src').textContent=(C.agent||'claude')==='claude'?[C.slack_source?'Slack route detected: '+(C.slack_source==='connector'?'claude.ai connector':'Slack plugin'):'',C.miro_source?'Miro route detected: '+(C.miro_source==='connector'?'claude.ai connector':'Miro plugin'):''].filter(Boolean).join(' · ')+(C.slack_source||C.miro_source?' — jobs use the matching tools automatically.':''):'';
  if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=(C.agent||'claude')==='grok'?'':'none';
  $('#cfg_ext').checked=!!C.chase_external_email;$('#cfg_send_int').checked=!!C.send_internal;$('#cfg_send_ext').checked=!!C.send_external;$('#cfg_domains').value=(C.internal_domains||[]).join(', ');
  const A=C.auto_chase||{};$('#cfg_auto').checked=!!A.enabled;$('#cfg_auto_days').value=A.after_workdays||3;$('#cfg_auto_max').value=A.max_chases||3;

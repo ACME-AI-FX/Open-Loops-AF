@@ -21,8 +21,11 @@ _GROK_JOB_HOME = ROOT / "state" / "grok-home"
 # silently find nothing. doctor.py detects which is connected and stores config "slack_source".
 # Miro (Roadmap card) is the official Miro plugin; jobs allow the whole server ("miro.*").
 _CLAUDE_SLACK = {"plugin": "mcp__plugin_slack_slack__slack_{}", "connector": "mcp__claude_ai_Slack__slack_{}"}
+# Miro likewise: the Miro plugin (plugin:miro:miro) or the claude.ai Miro connector. Jobs allow the
+# whole server either way; doctor.py stores which one is connected as config "miro_source".
+_CLAUDE_MIRO = {"plugin": "mcp__plugin_miro_miro", "connector": "mcp__claude_ai_Miro"}
 _FMT = {
-    "claude": {"slack": _CLAUDE_SLACK["plugin"], "gmail": "mcp__claude_ai_Gmail__{}", "miro": "mcp__plugin_miro_miro"},
+    "claude": {"slack": _CLAUDE_SLACK["plugin"], "gmail": "mcp__claude_ai_Gmail__{}", "miro": _CLAUDE_MIRO["plugin"]},
     "grok":   {"slack": "slack__slack_{}",       "gmail": "gmail__{}",                "miro": "miro"},
 }
 
@@ -46,6 +49,12 @@ def slack_source():
     """Claude only: "plugin" (default) or "connector" - see _CLAUDE_SLACK."""
     v = (_cfg().get("slack_source") or "plugin").strip().lower()
     return v if v in _CLAUDE_SLACK else "plugin"
+
+
+def miro_source():
+    """Claude only: "plugin" (default) or "connector" - see _CLAUDE_MIRO."""
+    v = (_cfg().get("miro_source") or "plugin").strip().lower()
+    return v if v in _CLAUDE_MIRO else "plugin"
 
 
 def display_name():
@@ -103,6 +112,7 @@ def _qualify(tools):
     fmt = dict(_FMT.get(name()) or _FMT["claude"])
     if name() == "claude":
         fmt["slack"] = _CLAUDE_SLACK[slack_source()]
+        fmt["miro"] = _CLAUDE_MIRO[miro_source()]
     out = []
     for t in tools:
         svc, tool = t.split(".", 1)

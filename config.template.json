@@ -5,6 +5,7 @@
   "use_slack": false,
   "slack_self_id": "",
   "slack_source": "",
+  "miro_source": "",
   "internal_domains": [
     "example.com"
   ],

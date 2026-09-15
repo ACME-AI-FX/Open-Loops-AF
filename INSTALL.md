@@ -171,9 +171,11 @@ state/logs/       one log per run
    connector*. Same tools, different tool prefix, and with the wrong one a refresh silently finds nothing. The
    connection check detects which you have and stores it as `slack_source` in `config.json`; Settings shows the
    detected route. If you switch, press *Check again* on the Home tab.
-2. **Miro (Roadmap card only).** One-off: in a terminal run `claude plugin install miro@claude-plugins-official`,
-   then *Open Claude* → `/mcp` → **miro** → Authenticate → Allow. The connection checklist shows a Miro row once it
-   is connected. Each Miro login is tied to one Miro team.
+2. **Miro (Roadmap card only).** Two routes, like Slack: the *claude.ai Miro connector* (add it at claude.ai →
+   Connectors, or *Open Claude* → `/mcp` → **Miro** → Authenticate) or the *Miro plugin*
+   (`claude plugin install miro@claude-plugins-official`, then `/mcp` → **miro** → Authenticate). The connection check
+   detects whichever is connected and stores it as `miro_source`; the plugin wins if both are. Each Miro login is tied
+   to one Miro team.
 3. **Second launch only opens the browser.** If Open Loops is already running, double-clicking the icon just opens the
    page. After editing anything in `openloops/`, close the app (it exits by itself after 3 h idle) and launch again.
 4. **UTF-8 BOM.** PowerShell tends to write a BOM at the start of JSON files. Every reader in the app uses `utf-8-sig`
