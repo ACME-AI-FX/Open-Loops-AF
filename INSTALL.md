@@ -84,8 +84,12 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 - Double-click **Open Loops** → page opens at http://localhost:8765 (already refreshed by the morning job).
   If another program already uses port 8765, Open Loops picks the next free port and opens the browser
   there instead; set `OPENLOOPS_PORT` if you want a fixed one.
+- **Your own to-do file (optional)**: Settings → Connections. Point it at a markdown file you already keep (or press
+  *Create a starter file there*). Open lines appear under Needs me; pressing done asks how you closed the item and
+  writes that back. The format and everything else Open Loops logs are listed under that setting. The old
+  `vault_path` folder setting still works.
 - **Closing the tab stops the app** a few seconds later (it waits for any running job first), so the next
-  double-click starts fresh with whatever code is installed. *Quit Open Loops* at the top of Settings does the same
+  double-click starts fresh with whatever code is installed. *Quit Open Loops* at the bottom of Settings does the same
   without closing the tab, and `python -m openloops.app --stop` does it from a terminal. If the tab just vanished
   (browser crash, laptop shut), the app notices within 15 minutes, and in any case quits after 3 h idle.
 - **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).

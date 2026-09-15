@@ -189,6 +189,14 @@ Single role: the owner. Primary goal: see what needs me and what is stuck, act o
   over last, Start over marked destructive and its confirm says "cannot be undone"; a sticky Save bar that reads
   "unsaved changes" once anything is edited, and a leave-page warning while unsaved.
 - **States**: "Checking your connections…" while the doctor runs instead of a blank Home.
+- **First run (Hick / Peak-End / Postel recover)**: during setup the page is only the setup card and the steps
+  strip; Day log, Roadmap and Refresh are hidden (not disabled) until "ready"; a failed step shows the last
+  lines of its log inline next to Try again; reaching "ready" toasts "All set" with the morning refresh time.
+- **Your own to-do file**: the "ClaudeCloud vault" folder setting becomes a generic, optional file path
+  (`standing_file`; the old `vault_path` folder still resolves). The Settings box shows whether the file is
+  there and how many open items it has as you type, offers "Create a starter file there", and folds the line
+  format plus a list of everything else Open Loops writes to disk under a details toggle. Cards say
+  "from <file name>" instead of naming a personal repo.
 
 ## Out of scope
 

@@ -14,7 +14,7 @@ STATE = ROOT / "state.json"
 INDEX = PKG / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
-EDITABLE = ("agent", "model", "effort", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "slack_source", "miro_source", "roadmap_board", "roadmap_frame")
+EDITABLE = ("agent", "model", "effort", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "standing_file", "slack_source", "miro_source", "roadmap_board", "roadmap_frame")
 import os
 PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
 WIN = sys.platform == "win32"
@@ -144,6 +144,9 @@ class H(BaseHTTPRequestHandler):
             self.send_header("Content-Length", str(len(b)))
             self.end_headers()
             self.wfile.write(b)
+        elif self.path.split("?")[0] == "/api/standing":
+            from . import standing
+            self._json(standing.status(self._query().get("path") or None))
         elif self.path == "/api/roadmap":
             from . import roadmap
             st, conf = roadmap.load(), roadmap.configured()
@@ -193,6 +196,15 @@ class H(BaseHTTPRequestHandler):
                 # adds cards to a board other people share - the page arms this for a few seconds after a preview
                 return self._json({"ok": False, "error": "confirm required"}, 400)
             return self._json({"started": run_job("roadmap", [mode] + (["--confirm"] if mode == "build" else []))})
+        if self.path == "/api/standing/create":
+            from . import standing
+            try:
+                p = standing.create_starter(body.get("path") or None)
+            except FileExistsError as e:
+                return self._json({"ok": False, "error": f"there is already a file at {e}"}, 400)
+            except OSError as e:
+                return self._json({"ok": False, "error": f"could not write there: {e}"}, 400)
+            return self._json({"ok": True, "path": str(p)})
         if self.path == "/api/doctor":
             import time as _t
             if body.get("force") or _t.time() - doctor_cache["at"] > 55:

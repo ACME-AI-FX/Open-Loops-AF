@@ -37,6 +37,7 @@
   "exclude_topics": [],
   "voice_sample_people": [],
   "vault_path": "",
+  "standing_file": "",
   "roadmap_board": "",
   "roadmap_frame": "",
   "send_internal": false,

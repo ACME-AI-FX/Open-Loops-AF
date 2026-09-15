@@ -37,7 +37,7 @@ they can keep in their head. Connect either source, or both. Each works on its o
   guilt.
 - **Keeps your own to-dos in the same place.** Add a note with or without a contact, so the jobs only you
   can do sit next to the real threads instead of in a separate app you stop opening.
-- **Reads a `standing-items.md` notes file, if you keep one**, so open items you wrote down in your notes
+- **Reads your own to-do file, if you keep one** (any markdown file; Settings → Connections), so open items you wrote down in your notes
   show up on the same morning list. Marking one done asks how you closed it and writes that back to the
   file.
 - **Closes loops properly.** *done* and *snooze* are local. A loop you have closed is still watched for

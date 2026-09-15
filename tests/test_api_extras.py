@@ -171,10 +171,29 @@ try:
     check("--model" not in claude_cmd(), "blank model -> no --model flag (Claude Code default)")
     api("/api/config", {"model": "sonnet"})
 
+    # ---- to-do file: status, starter file, path forms, legacy folder setting
+    s = api("/api/standing")[1]
+    check(s["exists"] is False and s["open"] == 0, "no to-do file on a fresh install")
+    todo = tmp / "notes" / "todo.md"
+    api("/api/config", {"standing_file": str(todo)})
+    code, r = api("/api/standing/create", {})
+    check(code == 200 and Path(r["path"]) == todo and todo.exists(), "starter file created at the configured path")
+    s = api("/api/standing")[1]
+    check(s["exists"] and s["open"] == 1, "starter file has one open example item")
+    code, r = api("/api/standing/create", {})
+    check(code == 400 and "already" in r["error"], "never overwrites an existing file")
+    ids = [l["id"] for l in api("/api/state")[1]["state"]["loops"]]
+    check("vault-A1" in ids, "the example item shows as a Needs-me card")
+    (tmp / "legacy" / "02-Research").mkdir(parents=True)
+    (tmp / "legacy" / "02-Research" / "standing-items.md").write_text("- [ ] A9 | p | legacy item | added 2026-09-01\n", encoding="utf-8")
+    api("/api/config", {"standing_file": "", "vault_path": str(tmp / "legacy")})
+    check(api("/api/standing")[1]["open"] == 1 and "vault-A9" in [l["id"] for l in api("/api/state")[1]["state"]["loops"]], "legacy vault_path folder still resolves")
+    api("/api/config", {"vault_path": ""})
+
     # ---- page has the new controls
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
     check("x.id==='self'&&x.ok" in html, "Update Slack is shown only when Slack is connected and the owner's id is known")
-    for needle in ('id="uslack"', 'id="cfg_model"', 'id="cfg_effort"', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
+    for needle in ('id="uslack"', 'id="cfg_model"', 'id="cfg_effort"', 'id="cfg_standing"', 'standingCreate(', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
         check(needle in html, f"page has {needle}")
     say("ALL OK")
 finally:

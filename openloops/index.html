@@ -24,6 +24,9 @@ dialog{border:1px solid var(--line);border-radius:10px;padding:0;background:var(
 dialog::backdrop{background:rgba(0,0,0,.45)}dialog .box{margin:0;border:0}dialog label{display:block;margin-top:10px;font-size:12px;color:var(--mut)}
 dialog input,dialog textarea{width:100%;margin-top:4px}dialog .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
 .card.busy{opacity:.5;pointer-events:none}
+/* radio/checkbox labels are real targets too (people picks, settings toggles) */
+label:has(>input[type=radio]),label:has(>input[type=checkbox]){display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 6px;border-radius:6px;cursor:pointer}
+label:has(>input:checked){background:var(--bg)}
 @media(max-width:720px){.card{grid-template-columns:10px 1fr}.card>.acts{grid-column:1/-1;justify-content:flex-start}}
 .rmrow{display:grid;grid-template-columns:1.3fr 1fr 110px 130px 130px 112px 40px;gap:6px;padding:5px 0;border-top:1px solid var(--line);align-items:start}
 .rmrow input,.rmrow select,#rm_paste{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);width:100%}
@@ -244,9 +247,17 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   </div>
  </div>
  <div class="box">
-  <h3>ClaudeCloud vault</h3>
-  <div class="sub">Folder with <code>02-Research/standing-items.md</code>. Blank = <code>~/ClaudeCloud</code>. Open Loops re-reads that file every time the page refreshes (about once a minute) — it does not watch GitHub. New or rewritten lines show a <b>new</b> / <b>updated</b> mark for the rest of the day. Done asks how you closed them and writes that into the vault.</div>
-  <input id="cfg_vault" style="margin:6px 0 0;width:100%" placeholder="/Users/you/ClaudeCloud">
+  <h3>Your own to-do file (optional)</h3>
+  <div class="sub">A markdown file you already keep, anywhere on this computer (a notes vault, a synced folder, a git repo). Its open lines show under <b>Needs me</b>; pressing <b>done</b> asks how you closed the item and writes that back into the file. Re-read about once a minute. Leave blank if you don't keep one.</div>
+  <input id="cfg_standing" style="margin:6px 0 0;width:100%" oninput="clearTimeout(window.stT);window.stT=setTimeout(standingStatus,400)" placeholder="C:\Users\you\Notes\standing-items.md   (a folder also works: <folder>\02-Research\standing-items.md)">
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="sub" id="standing_status"></span><button id="standing_create" type="button" style="display:none" onclick="standingCreate()">Create a starter file there</button></div>
+  <details style="margin-top:8px"><summary>The format, and what else gets logged</summary>
+   <div class="sub" style="margin-top:6px">One item per line, ids A1, A2… Snooze an item by adding <code>| snoozed-until YYYY-MM-DD</code>. Tick it here or in Open Loops.</div>
+   <pre class="out" style="margin-top:6px">- [ ] A1 | project | what to do | added 2026-09-15
+- [ ] A2 | Client X | send the revised quote | added 2026-09-15 | snoozed-until 2026-09-22
+- [x] A3 | project | done item | added 2026-09-01 | done 2026-09-14</pre>
+   <div class="sub" style="margin-top:6px">When you press done, the line moves under <b>## Closed</b> and your note is appended under <b>## Closure notes</b> as <code>- A1 | date | note</code>. Other things Open Loops writes: <code>state/daylog/&lt;date&gt;.json</code> + <code>.html</code> (each Day log), <code>state/logs/</code> (one log per job run), <code>state/roadmap.json</code> and <code>state/roadmap-created.txt</code> (Miro cards it added). Nothing else on disk is touched.</div>
+  </details>
  </div>
  <div class="box">
   <h3>Roadmap (Miro)</h3>
@@ -301,7 +312,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='
 // ---------- tabs ----------
 let formPainted=false;
 function showTab(t){$('#page_home').style.display=t==='home'?'':'none';$('#page_settings').style.display=t==='settings'?'':'none';
- $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');$('#refresh').style.display=t==='home'?'':'none';if(t!=='home')$('#uslack').style.display='none';
+ $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');if(S&&DOC)paintButtons(stage());else{$('#refresh').style.display='none';$('#uslack').style.display='none'}
  if(t==='settings'&&!formPainted)paintForm()}
 
 // ---------- data ----------
@@ -323,12 +334,16 @@ const haveVoice=()=>!!(V&&V.people&&Object.keys(V.people).length);
 // ---------- the stage machine: derived from facts on disk every tick, never from what fired earlier ----------
 function stage(){if(!DOC)return 'checking';if(!DOC.all_ok)return 'connect';if(!havePeople())return 'people';if(!haveVoice())return 'voice';if(!S.last_refresh)return 'scan';return 'ready'}
 const kicked={};   // which automatic jobs this page load has already started (so a failure shows instead of looping)
+let lastStage=null;
 const ORDER=[['connect','Connect'],['people',"Who's who"],['voice','Learn tone'],['scan','First scan'],['ready','Ready']];
 async function tick(){
  const st=stage();
  $('#steps').innerHTML=st==='ready'?'':st==='checking'?'<span class="sub"><span class="spin"></span>Checking your connections…</span>':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===st)>i?'done':k===st?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===st)>i?' ✓':''}</span>`).join('');
  for(const k of ['connect','people','auto'])$('#st_'+k).style.display='none';
- $('#lists').style.display=st==='ready'?'':'none';
+ // Hick / Prägnanz: while setting up, the page is the setup - the lists, Day log and Roadmap wait until "ready"
+ $('#lists').style.display=st==='ready'?'':'none';$('#dl_wrap').style.display=st==='ready'?'':'none';$('#rm_wrap').style.display=st==='ready'?'':'none';
+ if(lastStage&&lastStage!=='ready'&&lastStage!=='checking'&&st==='ready')toast(`All set. Open Loops now refreshes itself every weekday morning at ${(C&&C.refresh_time)||'09:15'}; press Refresh any time for a fresh pass.`,{ms:10000});
+ lastStage=st;
  if(st==='connect')paintConnect();
  else if(st==='people'){$('#st_people').style.display='';await stagePeople()}
  else if(st==='voice'||st==='scan'){$('#st_auto').style.display='';await stageAuto(st)}
@@ -363,16 +378,16 @@ async function stageAuto(st){const t=$('#auto_title'),s=$('#auto_sub'),r=$('#aut
  if(st==='voice'){
   if(!running('voice')&&!kicked.voice){kicked.voice=true;await api('/api/voice',{});J.voice={running:true}}
   if(running('voice')){t.innerHTML='<span class="spin"></span>3 · Learning how you write…';s.textContent='Reading your own messages to the people you just picked, so chases sound like you. About a minute.'}
-  else{t.textContent='3 · Learning your tone didn\'t finish';s.textContent='Details under "Last job output" below.';r.style.display=''}}
+  else{t.textContent='3 · Learning your tone didn\'t finish';s.innerHTML='Press <b>Try again</b>. If it fails again, the last lines of the log are:<pre class="log" style="margin-top:6px">'+esc(((J.voice||{}).log||'').trim().slice(-400)||'(no output)')+'</pre>';r.style.display=''}}
  else{
   if(!running('refresh')&&!kicked.scan){kicked.scan=true;await api('/api/refresh',{});J.refresh={running:true}}
   if(running('refresh')){t.innerHTML='<span class="spin"></span>4 · First scan of your Slack and email…';s.textContent='Looking for things you\'ve asked people for in the last week. Two or three minutes.'}
-  else{t.textContent='4 · The first scan didn\'t finish';s.textContent='Details under "Last job output" below.';r.style.display=''}}}
+  else{t.textContent='4 · The first scan didn\'t finish';s.innerHTML='Press <b>Try again</b>. If it fails again, the last lines of the log are:<pre class="log" style="margin-top:6px">'+esc(((J.refresh||{}).log||'').trim().slice(-400)||'(no output)')+'</pre>';r.style.display=''}}}
 function retryStage(){const st=stage();kicked[st==='voice'?'voice':'scan']=false;tick()}
 
 // Update Slack needs Slack connected AND the owner's Slack id known (refresh --slack-only is SKIPPED without it)
 const slackOk=()=>!!(DOC&&DOC.steps&&DOC.steps.some(x=>x.id==='slack'&&x.ok)&&DOC.steps.some(x=>x.id==='self'&&x.ok));
-function paintButtons(st){const rb=$('#refresh');rb.disabled=st==='connect'||st==='checking'||running('refresh');rb.textContent=running('refresh')?'Refreshing…':'Refresh';rb.title=st==='connect'?'connect Slack first':'';
+function paintButtons(st){const rb=$('#refresh');rb.style.display=st==='ready'&&$('#page_home').style.display!=='none'?'':'none';rb.disabled=running('refresh');rb.textContent=running('refresh')?'Refreshing…':'Refresh';   // hidden, not disabled, until setup is done
  const ub=$('#uslack');ub.style.display=st==='ready'&&slackOk()&&$('#page_home').style.display!=='none'?'':'none';ub.disabled=running('refresh');ub.textContent=running('refresh')?'Updating…':'Update Slack';
  const vb=$('#voicebtn');vb.disabled=!havePeople()||running('voice');vb.textContent=running('voice')?'Learning…':'Learn my tone';vb.title=havePeople()?'':'save Who\'s who first';
  $('#meta').textContent=S?'last refresh '+(S.last_refresh?fmt(S.last_refresh):'never')+(S.last_slack_refresh?' · slack '+fmt(S.last_slack_refresh):''):'';
@@ -390,7 +405,7 @@ function card(l,dim){const w=workdays(l.asked_at);const sn=l.snooze_until&&l.sno
  const note=l.channel==='note'||(l.manual&&!vault);
  return `<div class="card ${dim||sn?'snoozed':''}"><div class="dot ${col(l)}"></div>
  <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)" title="a draft is waiting in Slack/Gmail - check it before drafting again">✎ chase drafted ${fmt(l.last_chase_at)}</b>`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
- <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'ClaudeCloud / 02-Research/standing-items.md')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${linkify(l.notes)}`:''}${(l.links||[]).length?`<br>${l.links.map(x=>`<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.url)}"><span>${esc(x.label||host(x.url))}</span><button type="button" aria-label="remove link" title="remove link" onclick="event.preventDefault();dropLink('${esc(l.id)}','${esc(x.url)}')">×</button></a>`).join('')}`:''}</div></div>
+ <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'your to-do file')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${linkify(l.notes)}`:''}${(l.links||[]).length?`<br>${l.links.map(x=>`<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.url)}"><span>${esc(x.label||host(x.url))}</span><button type="button" aria-label="remove link" title="remove link" onclick="event.preventDefault();dropLink('${esc(l.id)}','${esc(x.url)}')">×</button></a>`).join('')}`:''}</div></div>
  <div class="acts" data-id="${esc(l.id)}">${(()=>{
    // Von Restorff: one primary per card - chase when waiting on them, done when it needs you; everything else quiet
    const id=esc(l.id),chaseable=l.status==='waiting'&&!note&&!vault;
@@ -519,7 +534,7 @@ async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
 
 // ---------- settings form: painted only on first open and after Save, never by background ticks ----------
 function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_model').value=C.model===undefined?'sonnet':(C.model||'');$('#cfg_effort').value=C.effort===undefined?'xhigh':(C.effort||'');$('#cfg_model_wrap').style.display=(C.agent||'claude')==='claude'?'':'none';$('#cfg_use_slack').checked=!!C.use_slack;$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
- if($('#cfg_vault'))$('#cfg_vault').value=C.vault_path||'';
+ $('#cfg_standing').value=C.standing_file||C.vault_path||'';standingStatus();
  $('#cfg_rm_board').value=C.roadmap_board||'';$('#cfg_rm_frame').value=C.roadmap_frame||'';
  $('#cfg_slack_src').textContent=(C.agent||'claude')==='claude'?[C.slack_source?'Slack route detected: '+(C.slack_source==='connector'?'claude.ai connector':'Slack plugin'):'',C.miro_source?'Miro route detected: '+(C.miro_source==='connector'?'claude.ai connector':'Miro plugin'):''].filter(Boolean).join(' · ')+(C.slack_source||C.miro_source?' — jobs use the matching tools automatically.':''):'';
  if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=(C.agent||'claude')==='grok'?'':'none';
@@ -536,10 +551,16 @@ function paintVoice(){if(V&&haveVoice()){$('#voice_meta').textContent='learned '
 async function saveCfg(){try{const tone={};document.querySelectorAll('[data-tone]').forEach(t=>tone[t.dataset.tone]=t.value);
  // people: radios in the table win; the JSON box is the fallback for adding/removing entries
  let people=JSON.parse($('#cfg_people').value);Object.keys(C.people||{}).forEach((n,i)=>{const v=document.querySelector(`input[name="pp${i}"]:checked`);if(v&&people[n])people[n].level=v.value});
- const body={agent:$('#cfg_agent').value,model:$('#cfg_model').value,effort:$('#cfg_effort').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),vault_path:($('#cfg_vault')&&$('#cfg_vault').value.trim())||'',roadmap_board:$('#cfg_rm_board').value.trim(),roadmap_frame:$('#cfg_rm_frame').value.trim(),chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
+ const body={agent:$('#cfg_agent').value,model:$('#cfg_model').value,effort:$('#cfg_effort').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),standing_file:$('#cfg_standing').value.trim(),vault_path:'',roadmap_board:$('#cfg_rm_board').value.trim(),roadmap_frame:$('#cfg_rm_frame').value.trim(),chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
   exclude_people:$('#cfg_excl_people').value.split(',').map(s=>s.trim()).filter(Boolean),exclude_topics:$('#cfg_excl_topics').value.split(',').map(s=>s.trim()).filter(Boolean)};
  const agentChanged=(C.agent||'claude')!==body.agent,slackChanged=!!C.use_slack!==body.use_slack;
  await api('/api/config',body);dirty=false;$('#cfg_save').textContent='Save settings';$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString()+(agentChanged||slackChanged?' - re-checking connections on Home':'');toast('Settings saved');await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);await loadRm();tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message;toast('Settings not saved: '+e.message.replace(/^.*-> \d+ /,''),{err:true})}}
+// the to-do file box: say whether the file is there and how many open items it has; offer to create it
+async function standingStatus(){try{const typed=$('#cfg_standing').value.trim();const s=await api('/api/standing'+(typed?'?path='+encodeURIComponent(typed):''));const el=$('#standing_status'),b=$('#standing_create');
+  if(s.exists){el.textContent=`found: ${s.path} · ${s.open} open item${s.open===1?'':'s'}`;b.style.display='none'}
+  else{el.textContent=$('#cfg_standing').value.trim()?`no file at ${s.path} yet`:'not set - nothing is read';b.style.display=$('#cfg_standing').value.trim()?'':'none'}}catch(e){}}
+async function standingCreate(){const b=$('#standing_create');b.disabled=true;try{if(dirty){await saveCfg()}const r=await api('/api/standing/create',{});toast('Starter file created: '+r.path+' - open it in your editor and replace the example line');await standingStatus();await loadState();renderLists()}
+ catch(e){toast('Could not create it: '+e.message.replace(/^.*-> \d+ /,''),{err:true})}b.disabled=false}
 // Zeigarnik: an edited-but-unsaved form says so on the sticky bar (Save is always within reach) and on leaving the tab
 let dirty=false;
 function cfgDirty(){if(dirty)return;dirty=true;$('#cfg_save').textContent='Save settings (unsaved changes)';$('#cfg_msg').textContent=''}
