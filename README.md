@@ -97,15 +97,16 @@ checkout folder, in any terminal (needs Node for the `npm` wrapper, nothing is i
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | start this checkout on http://localhost:8766 and open the browser (never collides with the installed copy) |
-| `npm run stop` | stop it, same as closing its tab |
+| `npm run dev` | stop any earlier dev session, then start this checkout on http://localhost:8766 and open the browser (never touches the installed copy) |
+| `npm run stop` | stop it, same as closing its tab (`-- --now` does not wait for a running job) |
+| `npm run prod` | start, or just open, the installed copy on 8765: the live version you use day to day |
 | `npm test` | every `tests/test_*.py`, with a summary |
 | `npm run doctor` | the connection checklist with Slack / Miro route detection |
 | `npm run refresh` | one refresh job in the foreground (`-- --slack-only` for the quick pass) |
 | `npm run setup` | install or upgrade the installed copy from this checkout (keeps its config and state) |
 
 Anything after `--` is passed through, e.g. `npm run dev -- --no-browser`. Without Node:
-`python -m openloops.app --port 8766`, `python -m openloops.app --stop --port 8766`, `python tests/run_all.py`.
+`python -m openloops.app --port 8766`, `python -m openloops.app --stop [--now] --port 8766`, `python tests/run_all.py`.
 The full developer guide (two copies / two ports, making a change, where things live, conventions) is
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -114,7 +115,7 @@ The full developer guide (two copies / two ports, making a change, where things 
 | Path | What it does |
 |---|---|
 | `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`; `--port N` to choose, `--stop` quits a running one, as does closing the tab) |
-| `package.json`, `scripts/loops.mjs` | `npm run dev` / `stop` / `test` / `doctor` / `refresh` / `setup` for a checkout (no npm packages) |
+| `package.json`, `scripts/loops.mjs` | `npm run dev` / `stop` / `prod` / `test` / `doctor` / `refresh` / `setup` for a checkout (no npm packages) |
 | `openloops/refresh.py` | finds new asks, checks open threads for replies (`--slack-only` for a quick Slack pass) |
 | `openloops/chase.py` · `autochase.py` | drafts (or, if you tick the boxes, sends) a nudge; the optional timer |
 | `openloops/voice.py` · `people.py` | learns how you write to each person; finds who you talk to most |

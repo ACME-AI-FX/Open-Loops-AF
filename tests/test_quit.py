@@ -6,7 +6,9 @@
   2. Goodbye followed by a new page's hello (a reload) -> the server stays up.
   3. POST /api/quit (the Settings button) -> exits.
   4. `python -m openloops.app --stop` -> exits; run again -> "not running", exit 1.
-Nothing here ever needs a running job, so the "wait for jobs first" branch is not exercised.
+  5. `--port N` beats OPENLOOPS_PORT.
+  6. With a job running (a stand-in daylog that just sleeps): `--stop` says it will wait and the server stays
+     up; `--stop --now` (what `npm run dev` uses) kills the job and the server exits.
 """
 import json, os, shutil, socket, subprocess, sys, tempfile, time, urllib.error, urllib.request
 from pathlib import Path
@@ -116,6 +118,42 @@ try:
     check(socket.socket().connect_ex(("127.0.0.1", PORT + 1)) == 0, "--port N starts on N even with OPENLOOPS_PORT set")
     r = subprocess.run([sys.executable, "-m", "openloops.app", "--stop", f"--port={PORT + 1}"], cwd=tmp, capture_output=True, text=True)
     check(r.returncode == 0 and gone(p, 10), "--stop --port=N stops that instance")
+
+    # 6. a running job: plain --stop waits for it, --stop --now cuts it short
+    sleeper = tmp / "openloops" / "daylog.py"  # throwaway copy: replace the real job with one that just sleeps
+    sleeper.write_text("import os, sys, time" + chr(10) + "open(sys.argv[-1], 'w').write(str(os.getpid()))" + chr(10)
+                       + "time.sleep(120)" + chr(10), encoding="utf-8")
+    pidfile = tmp / "job.pid"
+    p = start()
+    api("/api/state", page="tab5")
+    # run_job passes ["--digest-only"] as the only extra arg; the stand-in ignores it and writes its pid to argv[-1]
+    sleeper.write_text(sleeper.read_text(encoding="utf-8").replace("sys.argv[-1]", repr(str(pidfile))), encoding="utf-8")
+    check(api("/api/daylog", {"digest_only": True})["started"] is True, "a job starts")
+    for _ in range(50):
+        if pidfile.exists() and pidfile.read_text():
+            break
+        time.sleep(0.1)
+    check(pidfile.exists(), "the job child is running")
+    child = int(pidfile.read_text())
+    r = subprocess.run([sys.executable, "-m", "openloops.app", "--stop"], cwd=tmp, env=env, capture_output=True, text=True)
+    check(r.returncode == 0 and "once daylog finishes" in r.stdout, f"--stop with a job running says it will wait (out: {r.stdout.strip()!r})")
+    time.sleep(3)
+    check(up() and p.poll() is None, "...and the server is still up 3 s later")
+    r = subprocess.run([sys.executable, "-m", "openloops.app", "--stop", "--now"], cwd=tmp, env=env, capture_output=True, text=True)
+    check(r.returncode == 0 and "daylog cut short" in r.stdout, f"--stop --now reports the job it cut short (out: {r.stdout.strip()!r})")
+    check(gone(p, 10), "server exits after --stop --now without waiting for the job")
+
+    def alive(pid):
+        if sys.platform == "win32":
+            out = subprocess.run(["tasklist", "/FI", f"PID eq {pid}"], capture_output=True, text=True).stdout
+            return str(pid) in out
+        try:
+            os.kill(pid, 0)
+            return True
+        except OSError:
+            return False
+    time.sleep(1)
+    check(not alive(child), "the job child was killed too")
 
     # page wiring
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")

@@ -18,15 +18,16 @@ Run from the checkout folder.
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | start this checkout on http://localhost:8766 and open the browser |
-| `npm run stop` | stop it (closing its tab does the same a few seconds later) |
+| `npm run dev` | stop any earlier dev session (cutting short a job it is running), then start this checkout on http://localhost:8766 and open the browser |
+| `npm run stop` | stop it (closing its tab does the same a few seconds later); `-- --now` cuts a running job short |
+| `npm run prod` | start, or just open, the installed copy on 8765 (the live version); says which commit it was installed from |
 | `npm test` | every `tests/test_*.py`, one process each, with a summary |
 | `npm run doctor` | the connection checklist with Slack / Miro route detection |
 | `npm run refresh` | one refresh job in the foreground |
 | `npm run setup` | install or upgrade the installed copy from this checkout |
 
 Anything after `--` is passed through: `npm run dev -- --no-browser`, `npm run refresh -- --slack-only`.
-No Node? `python -m openloops.app --port 8766`, `python -m openloops.app --stop --port 8766`, `python tests/run_all.py`.
+No Node? `python -m openloops.app --port 8766`, `python -m openloops.app --stop [--now] --port 8766`, `python tests/run_all.py`.
 
 ## Two copies, two ports
 
@@ -34,7 +35,9 @@ No Node? `python -m openloops.app --port 8766`, `python -m openloops.app --stop 
   icon and the morning task. This is what you use day to day.
 - **Your checkout**: port **8766**, started by `npm run dev`. It has its own gitignored `config.json`, `state.json`,
   `voice.json` and `state/`, so it never touches the installed copy's data. On first run the page walks you through
-  setup like a new user (connections, who's who, tone, first scan).
+  setup like a new user (connections, who's who, tone, first scan). `npm run dev` always restarts: it stops the
+  dev session already there (a refresh it was running is cut short, this is throwaway data) and starts a fresh
+  one, so what you see is the code on disk. `npm run prod` starts or opens the installed copy instead.
 
 Never start a checkout on 8765: the launcher would find the installed copy already there and open *its* page, and
 you would be reading old code while thinking you were on new.
@@ -43,7 +46,7 @@ you would be reading old code while thinking you were on new.
 
 1. Branch from `main`.
 2. Edit. The page (`openloops/index.html`) is served fresh on every load, so reload the browser to see it. Python
-   changes need `npm run stop` then `npm run dev`; job scripts (`refresh`, `chase`, `daylog`, `roadmap`, …) are
+   changes need `npm run dev` again (it restarts the dev session for you); job scripts (`refresh`, `chase`, `daylog`, `roadmap`, …) are
    separate processes and pick up edits on their next run without a restart.
 3. `npm test`. Tests build a throwaway install on a spare port and never call Slack, Gmail or Claude.
 4. Keep the docs honest: `INSTALL.md` for users, `README.md` for the folder map, the spec under `docs/superpowers/specs/`
