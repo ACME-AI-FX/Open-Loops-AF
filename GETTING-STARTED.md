@@ -38,7 +38,11 @@ When the required rows are ticked the checklist disappears and your list starts 
 - **Needs me** — people who've replied and are waiting on *you*.
 - **Waiting on them** — things you've asked for. Green = recent, amber = a few days, red = getting old.
 - **draft chase** — writes a friendly nudge in your voice and puts it in the conversation as an unsent draft. You read it, you press send.
-- **done** when it's sorted. **snooze** to hide it for a bit.
+- **done** when it's sorted. **snooze** to hide it for a bit. Both give you a few seconds to **Undo**. Notes,
+  links and the auto-chase switch are under **more ▾** on each card.
+- **Pinned** (top of the page) — pin the boards and docs you open every day. A Miro board opens right there.
+- **Day log** (under the lists) — what moved today. **Write it up** drafts a short end-of-day note you can copy.
+- **Closing the tab stops the app.** Next time, just double-click the icon again.
 
 ## 4. Make it sound like you
 
