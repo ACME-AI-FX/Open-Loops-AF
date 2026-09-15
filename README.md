@@ -91,6 +91,8 @@ checkout folder, in any terminal (needs Node for the `npm` wrapper, nothing is i
 
 Anything after `--` is passed through, e.g. `npm run dev -- --no-browser`. Without Node:
 `python -m openloops.app --port 8766`, `python -m openloops.app --stop --port 8766`, `python tests/run_all.py`.
+The full developer guide (two copies / two ports, making a change, where things live, conventions) is
+[CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## What's in the folder
 
