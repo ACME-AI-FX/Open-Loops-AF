@@ -15,10 +15,15 @@ from .paths import ROOT
 WIN = sys.platform == "win32"
 _GROK_JOB_HOME = ROOT / "state" / "grok-home"
 
-# logical "service.tool" -> per-agent fully-qualified tool id
+# logical "service.tool" -> per-agent fully-qualified tool id.
+# Claude can reach Slack two ways: the Slack *plugin* (plugin:slack:slack, default) or the
+# claude.ai Slack *connector*. Same tools, different prefix; the wrong one makes a refresh
+# silently find nothing. doctor.py detects which is connected and stores config "slack_source".
+# Miro (Roadmap card) is the official Miro plugin; jobs allow the whole server ("miro.*").
+_CLAUDE_SLACK = {"plugin": "mcp__plugin_slack_slack__slack_{}", "connector": "mcp__claude_ai_Slack__slack_{}"}
 _FMT = {
-    "claude": {"slack": "mcp__plugin_slack_slack__slack_{}", "gmail": "mcp__claude_ai_Gmail__{}"},
-    "grok":   {"slack": "slack__slack_{}",                   "gmail": "gmail__{}"},
+    "claude": {"slack": _CLAUDE_SLACK["plugin"], "gmail": "mcp__claude_ai_Gmail__{}", "miro": "mcp__plugin_miro_miro"},
+    "grok":   {"slack": "slack__slack_{}",       "gmail": "gmail__{}",                "miro": "miro"},
 }
 
 # Grok CLI defaults to xhigh; Open Loops jobs are unattended JSON, not coding.
@@ -35,6 +40,12 @@ def _cfg():
 
 def name():
     return (_cfg().get("agent") or "claude").strip().lower()
+
+
+def slack_source():
+    """Claude only: "plugin" (default) or "connector" - see _CLAUDE_SLACK."""
+    v = (_cfg().get("slack_source") or "plugin").strip().lower()
+    return v if v in _CLAUDE_SLACK else "plugin"
 
 
 def display_name():
@@ -89,8 +100,16 @@ def grok_job_env():
 
 
 def _qualify(tools):
-    fmt = _FMT.get(name()) or _FMT["claude"]
-    return [fmt[t.split(".", 1)[0]].format(t.split(".", 1)[1]) for t in tools]
+    fmt = dict(_FMT.get(name()) or _FMT["claude"])
+    if name() == "claude":
+        fmt["slack"] = _CLAUDE_SLACK[slack_source()]
+    out = []
+    for t in tools:
+        svc, tool = t.split(".", 1)
+        pat = fmt[svc]
+        # "miro.*" -> the bare server id: Claude Code reads that as every tool on that server
+        out.append(pat.format(tool) if "{}" in pat else pat)
+    return list(dict.fromkeys(out))
 
 
 def run(prompt, tools):
