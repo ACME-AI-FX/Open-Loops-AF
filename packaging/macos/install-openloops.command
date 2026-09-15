@@ -1,9 +1,11 @@
 #!/bin/bash
 # Runs inside Terminal (opened by launcher.sh). Downloads Open Loops from GitHub and runs the
-# repo's own installer, install.sh. @REPO@ / @REF@ are filled in by build-dmg.sh.
+# repo's own installer, install.sh. @REPO@ / @REF@ / @LABEL@ are filled in by build-dmg.sh
+# (REF is what is downloaded - a commit sha for release builds; LABEL is the tag or branch name shown).
 set -e
 REPO="@REPO@"
 REF="@REF@"
+LABEL="@LABEL@"
 URL="https://github.com/$REPO/archive/$REF.zip"
 
 echo ""
@@ -11,7 +13,7 @@ echo "  ============================"
 echo "   Open Loops - installer"
 echo "  ============================"
 echo ""
-echo "  Downloading from https://github.com/$REPO ($REF) ..."
+echo "  Downloading from https://github.com/$REPO ($LABEL) ..."
 TMP="$(mktemp -d /tmp/openloops-src.XXXXXX)"
 if ! curl -fL --progress-bar -o "$TMP/src.zip" "$URL"; then
     echo ""

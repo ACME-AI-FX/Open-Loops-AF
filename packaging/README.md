@@ -33,8 +33,9 @@ git push origin v0.2
 ```
 
 `.github/workflows/release.yml` builds both installers (Inno Setup is preinstalled on GitHub's Windows runners)
-with `AppVersion=0.2` and `Ref=v0.2`, so the installer downloads exactly that tag, and attaches them to a
-GitHub Release. Stable links, always the newest release:
+with `AppVersion=0.2` and `Ref=<the commit v0.2 pointed to>`, so the installer downloads exactly the code that
+was tagged even if the tag is later moved, and attaches them to a GitHub Release. Stable links, always the
+newest release:
 
 - https://github.com/OscarC178/Open-Loops/releases/latest/download/OpenLoops-Setup.exe
 - https://github.com/OscarC178/Open-Loops/releases/latest/download/OpenLoops.dmg

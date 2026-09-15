@@ -9,9 +9,11 @@
 ;
 ; Build (dist\OpenLoops-Setup.exe):
 ;     ISCC packaging\windows\OpenLoops.iss
-;     ISCC /DAppVersion=0.2 /DRef=v0.2 packaging\windows\OpenLoops.iss     (release build - pulls that tag)
+;     ISCC /DAppVersion=0.2 /DRef=<commit sha> packaging\windows\OpenLoops.iss
+;         (release build: the workflow passes the commit the tag pointed to, so a moved tag cannot
+;          change what an already-downloaded installer installs)
 ; Run-time switches (all optional):
-;     /Ref=<branch-or-tag>   which GitHub ref to download (default: the Ref baked in at build time)
+;     /Ref=<branch, tag or sha>  which GitHub ref to download (default: the Ref baked in at build time)
 ;     /ZipUrl=<url>          download this zip instead of GitHub (testing)
 ;     /Name=<first name> /At=HH:MM  prefill the wizard; used as-is in /SILENT and /VERYSILENT runs
 ;     /DIR="<folder>"        install somewhere else (standard Inno switch)
