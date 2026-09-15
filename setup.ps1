@@ -3,7 +3,9 @@
   Right-click this file -> "Run with PowerShell". Or from a terminal:
       powershell -ExecutionPolicy Bypass -File setup.ps1
   The downloadable OpenLoops-Setup.exe (packaging/windows) fetches the repo and runs this with
-      -Dest "<install folder>" -Name <first name> -At HH:MM -NoLaunch
+      -Dest "<install folder>" -Name <first name> [-At HH:MM] -NoLaunch
+  Re-run over an existing install (the exe or this file) keeps config.json, including its refresh
+  time, unless -At is given explicitly.
 
   What it does (all on this computer, nothing sent anywhere):
     1. Installs Python and Claude Code if they're missing (using Windows' own installer, winget).
@@ -78,6 +80,16 @@ if (-not (Test-Path $CfgFile)) {
     $tpl.owner_name   = $Name
     $tpl.refresh_time = $At
     $tpl | ConvertTo-Json -Depth 6 | ForEach-Object { [IO.File]::WriteAllText($CfgFile, $_, (New-Object Text.UTF8Encoding $false)) }
+if (Test-Path $CfgFile) {
+    # Updating: the person's own refresh time wins unless a new one was asked for explicitly.
+    $cfg = Get-Content $CfgFile -Raw | ConvertFrom-Json
+    if ($PSBoundParameters.ContainsKey('At')) {
+        $cfg.refresh_time = $At   # keep config.json and the scheduled task in step (as Settings does)
+        $cfg | ConvertTo-Json -Depth 6 | ForEach-Object { [IO.File]::WriteAllText($CfgFile, $_, (New-Object Text.UTF8Encoding $false)) }
+    } elseif ($cfg.refresh_time) {
+        $At = $cfg.refresh_time
+    }
+}
 }
 Ok "Files in place"
 
@@ -102,6 +114,11 @@ Ok "Will refresh itself weekdays at $At"
 if ($NoLaunch) {
     Ok "Installed. Open Loops will guide you through connecting Slack and email when you first open it."
 } else {
+# $ErrorActionPreference = "Stop" does not react to a native process's exit code in Windows PowerShell 5.1.
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  Couldn't set the weekday refresh (register-task.ps1 exit $LASTEXITCODE, time '$At'). Fix the problem above and run setup again, or set the time later in the app's Settings." -ForegroundColor Yellow
+    exit 1
+}
     Say "Opening Open Loops - it will guide you through connecting Slack and email."
     Start-Process -FilePath $pyw -ArgumentList "-m openloops.app" -WorkingDirectory $Dest
 }

@@ -15,7 +15,9 @@
 ; Run-time switches (all optional):
 ;     /Ref=<branch, tag or sha>  which GitHub ref to download (default: the Ref baked in at build time)
 ;     /ZipUrl=<url>          download this zip instead of GitHub (testing)
-;     /Name=<first name> /At=HH:MM  prefill the wizard; used as-is in /SILENT and /VERYSILENT runs
+;     /Name=<first name> /At=HH:MM  prefill the wizard; used as-is in /SILENT and /VERYSILENT runs.
+;                            On an update (config.json already there) the wizard skips these and the
+;                            refresh time in config.json is kept unless /At= is given.
 ;     /DIR="<folder>"        install somewhere else (standard Inno switch)
 
 #ifndef AppVersion
@@ -119,9 +121,17 @@ end;
 
 function IsHHMM(const S: String): Boolean;
 begin
+  { Pascal Script has no set/range 'in'; comparisons only. Hours 00-23, minutes 00-59. }
   Result := (Length(S) = 5) and (S[3] = ':') and
             (S[1] >= '0') and (S[1] <= '2') and (S[2] >= '0') and (S[2] <= '9') and
-            (S[4] >= '0') and (S[4] <= '5') and (S[5] >= '0') and (S[5] <= '9');
+            (S[4] >= '0') and (S[4] <= '5') and (S[5] >= '0') and (S[5] <= '9') and
+            ((S[1] <> '2') or (S[2] <= '3'));
+end;
+
+{ An update: this folder already holds a set-up copy. Its settings win over the wizard defaults. }
+function IsUpdate: Boolean;
+begin
+  Result := FileExists(ExpandConstant('{app}\config.json'));
 end;
 
 function OnDownloadProgress(const Url, FileName: String; const Progress, ProgressMax: Int64): Boolean;
@@ -149,7 +159,7 @@ begin
   Result := False;
   { Updating an existing install: keep their settings, don't ask again. }
   if PageID = AboutPage.ID then
-    Result := FileExists(ExpandConstant('{app}\config.json'));
+    Result := IsUpdate;
 end;
 
 function NextButtonClick(CurPageID: Integer): Boolean;
@@ -237,7 +247,11 @@ begin
 
   Params := ExpandConstant('{sys}\WindowsPowerShell\v1.0\powershell.exe') +
             ' -NoProfile -ExecutionPolicy Bypass -File "' + Src + '\setup.ps1"' +
-            ' -Dest "' + ExpandConstant('{app}') + '" -Name "' + Name + '" -At "' + At + '" -NoLaunch';
+            ' -Dest "' + ExpandConstant('{app}') + '" -Name "' + Name + '" -NoLaunch';
+  { On an update the About page was skipped, so only pass a time the person actually chose
+    (the wizard, or /At= on the command line). Otherwise setup.ps1 keeps the one in config.json. }
+  if (not IsUpdate) or (ExpandConstant('{param:At|}') <> '') then
+    Params := Params + ' -At "' + At + '"';
   { Interactive runs: keep the console open on failure so the person can read what went wrong. }
   if not WizardSilent then
     Params := Params + ' || (echo. & echo   Setup could not finish. Read the message above, then press any key to close this window. & pause >nul & exit /b 1)';
