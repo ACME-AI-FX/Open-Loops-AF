@@ -29,6 +29,7 @@ def check(cond, what):
 tmp = Path(tempfile.mkdtemp(prefix="openloops-store-"))
 store.STATE = tmp / "state.json"
 store.CONFIG = tmp / "config.json"
+store.TEMPLATE = tmp / "config.template.json"
 
 # --- read_json: missing, BOM, junk
 check(store.read_json(tmp / "nope.json", {"d": 1}) == {"d": 1}, "read_json returns default when missing")
@@ -81,4 +82,17 @@ say("ok   norm_date rejects non-dates")
 # --- load_state default when missing
 store.STATE = tmp / "missing.json"
 check(store.load_state()["loops"] == [], "load_state returns an empty state when the file is missing")
+# --- load_cfg: template defaults under a thin config.json (a checkout that never ran the installer)
+store.write_json(store.TEMPLATE, {"owner_name": "", "history_days": 30,
+                                  "tone": {"base": "warm", "peer": "casual"}, "auto_chase": {"enabled": False, "max_chases": 3}})
+store.write_json(store.CONFIG, {"owner_name": "Oscar", "tone": {"base": "", "senior": "respectful"}, "auto_chase": {"enabled": True}, "extra": 1})
+c = store.load_cfg()
+check(c["owner_name"] == "Oscar" and c["history_days"] == 30, "load_cfg keeps set values and fills missing keys from the template")
+check(c["tone"] == {"base": "warm", "peer": "casual", "senior": "respectful"}, "blank tone entries fall back to the template, set ones win")
+check(c["auto_chase"] == {"enabled": True, "max_chases": 3}, "nested sections merge one level deep")
+check(c["extra"] == 1, "keys the template does not know survive")
+store.TEMPLATE = tmp / "no-template.json"
+check(store.load_cfg()["owner_name"] == "Oscar", "no template file: config.json alone")
+store.CONFIG = tmp / "no-config.json"
+check(store.load_cfg() == {}, "neither file: empty dict, no crash")
 say("ALL OK")

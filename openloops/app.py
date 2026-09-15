@@ -9,7 +9,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .paths import PKG, ROOT
-from .store import norm_date, read_json, write_json
+from .store import load_cfg, norm_date, read_json, write_json
 STATE = ROOT / "state.json"
 INDEX = PKG / "index.html"
 CONFIG = ROOT / "config.json"
@@ -34,7 +34,7 @@ PAGE_STALE_S = 15 * 60
 PEOPLEF = ROOT / "people_suggested.json"
 
 def cfg():
-    return read_json(CONFIG, {}) or {}
+    return load_cfg()
 
 
 def history_days():
@@ -122,7 +122,8 @@ class H(BaseHTTPRequestHandler):
             if dirty:
                 save(s)
             s["loops"] = list(s.get("loops") or []) + vault_loops
-            self._json({"state": s, "jobs": jobs, "today": date.today().isoformat()})
+            self._json({"state": s, "jobs": jobs, "today": date.today().isoformat(),
+                        "pages": len(pages), "quitting": quit_requested})  # who is holding the server up
         elif self.path == "/api/config":
             self._json({"config": cfg(), "voice": read_json(VOICEF), "people_suggested": read_json(PEOPLEF)})
         elif self.path.split("?")[0] == "/api/daylog":

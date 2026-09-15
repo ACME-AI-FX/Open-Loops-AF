@@ -1,6 +1,9 @@
 """Small shared helpers for the JSON files under the install root.
 
 read_json / write_json  BOM-tolerant readers, atomic writers (tmp + replace).
+load_cfg                config.json laid over config.template.json, so a copy that never went
+                        through the installer (a git checkout, a hand-made config) still has every
+                        default; empty strings inside tone / auto_chase / escalation fall back too.
 load_state / update_state
     Every job script (refresh, chase, autochase, daylog, roadmap) runs for minutes between
     reading state.json and writing it back. update_state re-reads the file at write time and
@@ -15,6 +18,7 @@ from pathlib import Path
 from .paths import ROOT
 STATE = ROOT / "state.json"
 CONFIG = ROOT / "config.json"
+TEMPLATE = ROOT / "config.template.json"
 
 
 def read_json(path, default=None):
@@ -36,7 +40,18 @@ def write_json(path, obj):
 
 
 def load_cfg():
-    return read_json(CONFIG, {}) or {}
+    """config.json with every missing key (and every blank entry in a nested section such as tone)
+    filled from config.template.json. Keys the template does not know are kept as they are."""
+    base = read_json(TEMPLATE, {}) or {}
+    cfg = read_json(CONFIG, {}) or {}
+    out = dict(base)
+    for k, v in cfg.items():
+        d = base.get(k)
+        if isinstance(v, dict) and isinstance(d, dict):
+            out[k] = {**d, **{kk: vv for kk, vv in v.items() if vv not in ("", None)}}
+        else:
+            out[k] = v
+    return out
 
 
 def load_state():
