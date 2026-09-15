@@ -88,6 +88,18 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
 - **done / snooze / reopen** are local only. Recently-closed loops are still watched for 5 days and reopen if the person comes back with a new question.
 - **⚙ Settings** (bottom of the page): external-email chasing on/off, tone per seniority, people list, exclusions, and *Learn my tone*.
+- **Update Slack** (next to Refresh, shown once Slack is connected) is a quick Slack-only pass: no email, about a
+  third of the time. It keeps its own cursor, so the next full Refresh still picks up every email ask made in between.
+- **+ link** on a card attaches a document URL (Drive, Miro, Notion, Figma); the refresh also captures any document
+  link it sees in the thread. Links show as chips; bare URLs typed into a note become clickable too.
+- **+ note** on a card pre-fills the *Needs me* form with that person and ask, for a reminder to yourself about it.
+- **Day log** (collapsed section under the lists): what moved today, straight from the tracker. *Write it up* asks the
+  AI to read today's sent messages and write a short first-person note (Done / Moved / Waiting on) with a copy button
+  and a printable page. Nothing is sent.
+- **Roadmap** (collapsed section; needs Miro connected and a board + frame set in Settings): paste standup notes,
+  *Read these notes* turns them into rows with lane / column / owner, fix any mistakes, *Preview* shows what would be
+  added, then *Add to the roadmap* (press twice within 6 s) adds one sticky note per row inside the frame. It never
+  deletes, moves or edits anything on the board. *Read board* first so the lane and column choices match the frame.
 
 ## 4. Rules the tool follows (worth telling whoever installs it)
 
@@ -136,11 +148,34 @@ openloops/        the app (python3 -m openloops.app)
   refresh.py      new asks + reply detection → state.json
   chase.py        draft a nudge for one loop
   voice.py        learn writing style → voice.json
+  daylog.py       today's digest + optional prose → state/daylog/<date>.json/.html
+  roadmap.py      Roadmap card: read board / parse notes / preview / build (Miro via the agent)
+  store.py        JSON helpers; update_state re-reads state.json before a job writes it
   index.html      the page
 tests/            qa.py and unit tests
 scripts/          weekday refresh (Task Scheduler / launchd) + macos-app.sh
 docs/             logo, screenshot, GitHub Pages, Mac Dock icon
 config.json       your settings (gitignored, next to the folder root)
 state.json        your list (gitignored)
+state/roadmap.json  staged roadmap rows (kept out of state.json on purpose)
+state/daylog/     one json + html per day
 state/logs/       one log per run
 ```
+
+## 7. Before you start: gotchas
+
+1. **Slack route.** Claude can reach Slack through the Slack *plugin* (`plugin:slack:slack`) or the *claude.ai Slack
+   connector*. Same tools, different tool prefix, and with the wrong one a refresh silently finds nothing. The
+   connection check detects which you have and stores it as `slack_source` in `config.json`; Settings shows the
+   detected route. If you switch, press *Check again* on the Home tab.
+2. **Miro (Roadmap card only).** One-off: in a terminal run `claude plugin install miro@claude-plugins-official`,
+   then *Open Claude* → `/mcp` → **miro** → Authenticate → Allow. The connection checklist shows a Miro row once it
+   is connected. Each Miro login is tied to one Miro team.
+3. **Second launch only opens the browser.** If Open Loops is already running, double-clicking the icon just opens the
+   page. After editing anything in `openloops/`, close the app (it exits by itself after 3 h idle) and launch again.
+4. **UTF-8 BOM.** PowerShell tends to write a BOM at the start of JSON files. Every reader in the app uses `utf-8-sig`
+   and the installer writes without a BOM; keep both if you add scripts.
+5. **OneDrive / Dropbox folders** lock files while syncing. Install to the default `%LOCALAPPDATA%\OpenLoops`, not a
+   synced folder.
+6. **Jobs never clobber your clicks.** A refresh can run for minutes; anything you add or snooze meanwhile is kept
+   because every job re-reads `state.json` just before writing (`store.update_state`).

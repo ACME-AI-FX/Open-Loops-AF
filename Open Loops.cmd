@@ -6,6 +6,12 @@ rem   Already installed?  -> starts it (hidden, no console window) and opens the
 setlocal
 set "APP=%LOCALAPPDATA%\OpenLoops\openloops\app.py"
 if exist "%APP%" (
+    where pythonw >nul 2>&1
+    if errorlevel 1 (
+        echo Python was not found on this computer's PATH. Run setup.ps1 again, or install Python from python.org and tick "Add to PATH".
+        pause
+        exit /b 1
+    )
     cd /d "%LOCALAPPDATA%\OpenLoops"
     start "" pythonw -m openloops.app
     exit /b 0

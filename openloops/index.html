@@ -8,7 +8,14 @@ header{display:flex;align-items:center;gap:14px;padding:12px 24px;border-bottom:
 h1{font-size:18px;margin:0 6px 0 0}header .meta{color:var(--mut);font-size:12px;margin-left:auto}
 .tabs{display:flex;gap:2px}.tabs button{border:none;background:none;padding:6px 12px;border-radius:6px;color:var(--mut)}.tabs button.on{background:var(--bg);color:var(--ink);font-weight:600}
 button{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
-button.primary{background:var(--b);color:#fff;border-color:var(--b)}button:disabled{opacity:.5;cursor:not-allowed}
+button.primary{background:var(--b);color:#fff;border-color:var(--b)}button:disabled{opacity:.5;cursor:wait}
+.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--b);text-decoration:none;margin:3px 4px 0 0;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}.chip b{color:var(--mut);cursor:pointer;margin-left:5px}
+.rmrow{display:grid;grid-template-columns:1.3fr 1fr 110px 130px 130px 112px 28px;gap:6px;padding:5px 0;border-top:1px solid var(--line);align-items:start}
+.rmrow input,.rmrow select,#rm_paste{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);width:100%}
+.rmrow.rmhead{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;border-top:0}
+.rmrow button{padding:2px 7px;font-size:12px;color:var(--mut)}
+pre.out{white-space:pre-wrap;font:13px/1.55 system-ui,Segoe UI,sans-serif;margin:8px 0 0;max-height:360px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px}
+details.sect{margin-top:16px}details.sect>summary{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);cursor:pointer}details.sect>summary span{letter-spacing:0;text-transform:none}
 main{max-width:1100px;margin:0 auto;padding:20px 24px}
 h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:22px 0 8px}
 h3{margin:4px 0 6px;font-size:14px}
@@ -32,6 +39,7 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
 <header><h1>Open Loops</h1>
 <div class="tabs"><button id="tab_home" class="on" onclick="showTab('home')">Home</button><button id="tab_settings" onclick="showTab('settings')">⚙ Settings</button></div>
 <button class="primary" id="refresh" onclick="refresh()" title="">Refresh</button>
+<button id="uslack" onclick="refresh(true)" title="quick pass: Slack only, skips email" style="display:none">Update Slack</button>
 <span class="pill" id="gmail"></span>
 <span class="meta" id="meta"></span></header>
 <main>
@@ -85,6 +93,42 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <h2>Waiting on them <span id="n2"></span></h2><div id="waiting"></div>
   <details><summary>Snoozed / done</summary><div id="rest"></div></details>
  </div>
+ <details class="sect" id="dl_wrap"><summary>Day log <span class="sub" id="dl_meta"></span></summary>
+  <div class="box" style="margin-top:8px">
+   <div class="sub" id="dl_digest"></div>
+   <div style="margin:8px 0 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button id="dl_run" onclick="writeDaylog()">Write it up</button>
+    <button id="dl_copy" onclick="copyDaylog()" style="display:none">Copy</button>
+    <a id="dl_open" href="/api/daylog/page" target="_blank" class="sub" style="display:none">open the page</a>
+    <span class="sub" id="dl_msg"></span>
+   </div>
+   <pre id="dl_text" class="out" style="display:none"></pre>
+  </div>
+ </details>
+ <details class="sect" id="rm_wrap"><summary>Roadmap <span class="sub" id="rm_head"></span></summary>
+  <div class="box" id="roadmap" style="margin-top:8px;display:none">
+   <div class="sub" id="rm_board"></div>
+   <div class="sub" style="margin:8px 0 4px">Paste your standup notes — one thought per line is plenty. Reading them fills in the lane, column, owner and state; fix anything it got wrong before it goes near the board.</div>
+   <textarea id="rm_paste" rows="4" placeholder="e.g. Rafe still on the layout tool fixes&#10;Alara to scope the multi-plate ticket this week" oninput="rmTouch()"></textarea>
+   <div style="margin:8px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button class="primary" id="rm_parsebtn" onclick="rmParse()">Read these notes</button>
+    <button onclick="rmAddRow()">+ row by hand</button>
+    <button id="rm_readbtn" onclick="rmRead()">Read board</button>
+    <span class="sub" id="rm_msg"></span>
+   </div>
+   <div id="rm_rows"></div>
+   <div style="margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:6px">
+    <b style="font-size:12px">Send it to the board</b>
+    <div class="sub" style="margin:4px 0 8px">Preview shows what would be added. Posting <b>adds</b> cards and deletes nothing: a row already on the board is reported and left alone.</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+     <button id="rm_prevbtn" onclick="rmPreview()">Preview</button>
+     <button id="rm_postbtn" onclick="rmPost()" disabled>Add to the roadmap</button>
+     <span class="sub" id="rm_armmsg"></span>
+    </div>
+    <div id="rm_preview" class="sub" style="margin-top:8px"></div>
+   </div>
+  </div>
+ </details>
  <details style="margin-top:14px"><summary>Last job output</summary><pre id="log" class="log"></pre></details>
 </div>
 <div id="close_modal">
@@ -115,6 +159,7 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <h3>Your AI</h3>
   <div class="sub">Which AI assistant reads your messages and writes the nudges. It must be installed and signed in on this computer — after switching, the Home tab re-checks the connections.</div>
   <select id="cfg_agent" style="margin:6px 0 0;font:inherit;padding:4px" onchange="if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=this.value==='grok'?'':'none'"><option value="claude">Claude (Claude Code)</option><option value="grok">Grok (Grok CLI)</option></select>
+  <div class="sub" id="cfg_slack_src" style="margin-top:6px"></div>
   <div id="cfg_slack_wrap" style="margin-top:10px">
    <label><input type="checkbox" id="cfg_use_slack"> Use Slack</label>
    <div class="sub">Grok only. Off (default) = Gmail-only; Slack is not started or checked. On = load Grok's Slack plugin and show it on the connection checklist — then Open Grok → <code>/mcps</code> → Slack → <b>i</b>.</div>
@@ -164,6 +209,12 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <details style="margin-top:8px"><summary>Advanced: edit as JSON</summary><textarea id="cfg_people" rows="8" style="width:100%;font:12px/1.4 ui-monospace,Consolas,monospace;margin-top:6px"></textarea></details>
  </div>
  <div class="box">
+  <h3>Roadmap (Miro)</h3>
+  <div class="sub">The Roadmap section on Home adds cards to a frame on a Miro board. Board = its name or link; frame = the title of the roadmap frame on it. Needs Miro connected in Claude — the connection checklist on Home says how.</div>
+  <input id="cfg_rm_board" style="margin:6px 0 0;width:100%" placeholder="board name or https://miro.com/app/board/…">
+  <input id="cfg_rm_frame" style="margin:6px 0 0;width:100%" placeholder="frame title, e.g. Roadmap Sep 2026">
+ </div>
+ <div class="box">
   <h3>Exclusions</h3>
   <div class="sub">People / topics the refresh should never turn into loops (comma-separated).</div>
   <input id="cfg_excl_people" style="width:100%;margin-top:6px" placeholder="people">
@@ -190,13 +241,16 @@ const $=s=>document.querySelector(s);
 let S=null,J=null,TODAY=null,C=null,V=null,P=null,DOC=null;
 const fmt=d=>d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const host=u=>{try{return new URL(u).host.replace(/^www\./,'')}catch(e){return u}};
+// escape first, then make bare URLs clickable - notes are free text typed by you or written by the agent
+const linkify=s=>esc(s).replace(/https?:\/\/[^\s<]+/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u.length>48?host(u)+'/…':u}</a>`);
 const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
 function banner(msg){const b=$('#banner');if(!msg){b.style.display='none';return}b.style.display='';b.textContent=msg}
 
 // ---------- tabs ----------
 let formPainted=false;
 function showTab(t){$('#page_home').style.display=t==='home'?'':'none';$('#page_settings').style.display=t==='settings'?'':'none';
- $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');$('#refresh').style.display=t==='home'?'':'none';
+ $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');$('#refresh').style.display=t==='home'?'':'none';if(t!=='home')$('#uslack').style.display='none';
  if(t==='settings'&&!formPainted)paintForm()}
 
 // ---------- data ----------
@@ -265,11 +319,14 @@ async function stageAuto(st){const t=$('#auto_title'),s=$('#auto_sub'),r=$('#aut
   else{t.textContent='4 · The first scan didn\'t finish';s.textContent='Details under "Last job output" below.';r.style.display=''}}}
 function retryStage(){const st=stage();kicked[st==='voice'?'voice':'scan']=false;tick()}
 
+const slackOk=()=>!!(DOC&&DOC.steps&&DOC.steps.some(x=>x.id==='slack'&&x.ok));
 function paintButtons(st){const rb=$('#refresh');rb.disabled=st==='connect'||st==='checking'||running('refresh');rb.textContent=running('refresh')?'Refreshing…':'Refresh';rb.title=st==='connect'?'connect Slack first':'';
+ const ub=$('#uslack');ub.style.display=st==='ready'&&slackOk()&&$('#page_home').style.display!=='none'?'':'none';ub.disabled=running('refresh');ub.textContent=running('refresh')?'Updating…':'Update Slack';
  const vb=$('#voicebtn');vb.disabled=!havePeople()||running('voice');vb.textContent=running('voice')?'Learning…':'Learn my tone';vb.title=havePeople()?'':'save Who\'s who first';
- $('#meta').textContent=S?'last refresh '+(S.last_refresh?fmt(S.last_refresh):'never'):'';
+ $('#meta').textContent=S?'last refresh '+(S.last_refresh?fmt(S.last_refresh):'never')+(S.last_slack_refresh?' · slack '+fmt(S.last_slack_refresh):''):'';
  const g=DOC?DOC.steps.find(x=>x.id==='gmail'):null;$('#gmail').textContent=g?(g.ok?'gmail ok':'gmail: not connected (optional)'):'';
- $('#log').textContent=J?['refresh','chase','voice','people','standing'].map(k=>J[k]&&J[k].log?`--- ${k}\n${J[k].log}`:'').filter(Boolean).join('\n'):''}
+ $('#log').textContent=J?Object.keys(J).map(k=>J[k]&&J[k].log?`--- ${k}\n${J[k].log}`:'').filter(Boolean).join('\n'):'';
+ paintDaylog();paintRm()}
 
 // ---------- lists ----------
 function workdays(from){let a=new Date(from),b=new Date(),n=0;a.setHours(0,0,0,0);b.setHours(0,0,0,0);for(let d=new Date(a);d<b;d.setDate(d.getDate()+1)){if(d.getDay()%6)n++;}return n}
@@ -281,11 +338,12 @@ function card(l,dim){const w=workdays(l.asked_at);const sn=l.snooze_until&&l.sno
  const note=l.channel==='note'||(l.manual&&!vault);
  return `<div class="card ${dim||sn?'snoozed':''}"><div class="dot ${col(l)}"></div>
  <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)">✎ chase drafted ${fmt(l.last_chase_at)}</b> — check Slack/Gmail drafts before drafting again`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
- <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'ClaudeCloud / 02-Research/standing-items.md')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${esc(l.notes)}`:''}</div></div>
+ <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'ClaudeCloud / 02-Research/standing-items.md')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${linkify(l.notes)}`:''}${(l.links||[]).length?`<br>${l.links.map(x=>`<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.url)}">${esc(x.label||host(x.url))}<b onclick="event.preventDefault();dropLink('${esc(l.id)}','${esc(x.url)}')" title="remove link">×</b></a>`).join('')}`:''}</div></div>
  <div class="acts">${l.status!=='done'?(vault?`<button onclick="closeVault('${esc(l.id)}')">done</button>`:`<button onclick="act('${esc(l.id)}','done')">done</button>`):`<button onclick="act('${esc(l.id)}','reopen')">reopen</button>`}
  ${l.status==='waiting'&&!note&&!vault?`<button onclick="chase('${esc(l.id)}')" ${running('chase')?'disabled':''}>${willSend(l)?'send chase':'draft chase'}</button>`:''}
  ${vault?'':sn?`<button onclick="act('${esc(l.id)}','unsnooze')">unsnooze</button>`:l.status!=='done'?`<button onclick="snooze('${esc(l.id)}')">snooze</button>`:''}
- ${vault||l.status==='done'?'':`<button onclick="editNote('${esc(l.id)}')">${l.notes?'edit note':'note'}</button>`}
+ ${vault||l.status==='done'?'':`<button onclick="editNote('${esc(l.id)}')">${l.notes?'edit note':'note'}</button><button onclick="addLink('${esc(l.id)}')" title="attach a document link (Drive, Miro, Notion…)">+ link</button>`}
+ ${!note&&!vault&&l.status!=='done'?`<button onclick="noteFor('${esc(l.id)}')" title="add a reminder for yourself about this">+ note</button>`:''}
  ${l.status==='waiting'&&!note&&!vault&&C&&C.auto_chase&&C.auto_chase.enabled?(l.auto_off?`<button onclick="act('${esc(l.id)}','auto_on')" title="auto-chase is off for this loop">auto: off</button>`:`<button onclick="act('${esc(l.id)}','auto_off')" title="stop the timer from ${willSend(l)?'sending':'drafting'} chases for this loop" style="border-color:var(--g)">auto: on</button>`):''}</div></div>`}
 function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=='done'&&!(l.snooze_until&&l.snooze_until>TODAY);
  const needs=L.filter(l=>l.status==='needs_me'&&live(l)),wait=L.filter(l=>l.status==='waiting'&&live(l)).sort((a,b)=>a.asked_at<b.asked_at?-1:1),rest=L.filter(l=>!live(l));
@@ -297,6 +355,11 @@ function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=
 async function act(id,action,extra){await api('/api/action',Object.assign({id,action},extra||{}));await loadState();renderLists()}
 function snooze(id){const d=prompt('Snooze until (YYYY-MM-DD)',new Date(Date.now()+2*864e5).toISOString().slice(0,10));if(d)act(id,'snooze',{until:d})}
 function editNote(id){const l=S.loops.find(x=>x.id===id);if(!l)return;const n=prompt('Note',l.notes||'');if(n!==null)act(id,'note',{notes:n})}
+async function addLink(id){const u=(prompt('Link (https://…)')||'').trim();if(!u)return;const label=(prompt('Label (optional)','')||'').trim();
+ try{await act(id,'add_link',{url:u,label})}catch(e){banner('Could not add that link: '+e.message)}}
+function dropLink(id,url){act(id,'drop_link',{url})}
+function noteFor(id){const l=S.loops.find(x=>x.id===id);if(!l)return;$('#need_who').value=l.owner||'';$('#need_ask').value='';$('#need_notes').value='re: '+(l.ask||'');
+ $('#add_need').scrollIntoView({behavior:'smooth',block:'center'});$('#need_ask').focus()}
 let closingId=null;
 function closeVault(id){const l=S.loops.find(x=>x.id===id);if(!l)return;closingId=id;
  $('#close_title').textContent='How are you closing '+(l.vault_id||id)+'?';
@@ -310,7 +373,66 @@ async function addNeed(){const owner=$('#need_who').value.trim(),ask=$('#need_as
  if(!ask){banner('Need something to do.');return}
  try{await api('/api/action',{action:'add',owner,ask,notes});$('#need_who').value='';$('#need_ask').value='';$('#need_notes').value='';banner('');await loadState();renderLists()}
  catch(e){banner('Could not add that: '+e.message)}}
-async function refresh(){if(running('refresh'))return;await api('/api/refresh',{});J.refresh={running:true};tick()}
+async function refresh(slackOnly){if(running('refresh'))return;await api('/api/refresh',{slack_only:!!slackOnly});J.refresh={running:true};tick()}
+
+// ---------- day log: instant digest from state, prose on demand ----------
+let DL=null;
+async function loadDaylog(){try{DL=await api('/api/daylog')}catch(e){DL=null}paintDaylog()}
+function paintDaylog(){const d=DL;if(!d||!$('#dl_digest'))return;const g=d.digest||{};
+ const line=(k,t)=>(g[k]||[]).length?`<div><b>${t}:</b> ${g[k].map(x=>esc((x.owner?x.owner+' — ':'')+x.ask)).join(' · ')}</div>`:'';
+ $('#dl_digest').innerHTML=line('closed','Closed today')+line('opened','Asked today')+line('chased','Chased today')+`<div>${g.waiting||0} waiting on them · ${g.needs_me||0} need you</div>`;
+ $('#dl_meta').textContent=d.written_at?'· written '+fmt(d.written_at):'';
+ const has=!!d.text;$('#dl_text').style.display=has?'':'none';$('#dl_text').textContent=d.text||'';$('#dl_copy').style.display=has?'':'none';$('#dl_open').style.display=d.has_page?'':'none';
+ const b=$('#dl_run');b.disabled=running('daylog');b.textContent=running('daylog')?'Writing…':(has?'Write it again':'Write it up');
+ if(running('daylog'))$('#dl_msg').textContent='reading today\'s messages… about a minute';else if($('#dl_msg').textContent.startsWith('reading'))$('#dl_msg').textContent=''}
+async function writeDaylog(){if(running('daylog'))return;try{await api('/api/daylog',{});J.daylog={running:true};paintDaylog()}catch(e){$('#dl_msg').textContent=e.message}}
+async function copyDaylog(){try{await navigator.clipboard.writeText((DL&&DL.text)||'');$('#dl_msg').textContent='copied'}catch(e){$('#dl_msg').textContent='copy failed — select the text instead'}}
+
+// ---------- roadmap: stage rows here, add cards to the Miro frame through Claude ----------
+let RM=null,rmSaveT=null,rmArmT=null,rmArmed=false,rmRendered='';
+const miroOk=()=>!!(DOC&&DOC.steps&&DOC.steps.some(x=>x.id==='miro'&&x.ok));
+function rmRows(){return (RM&&RM.store&&RM.store.rows)||[]}
+async function loadRm(){try{RM=await api('/api/roadmap')}catch(e){RM=null}rmRendered='';paintRm()}
+function paintRm(){if(!RM||!$('#roadmap'))return;
+ if(!miroOk()){$('#rm_head').textContent='· connect Miro in Claude to use this (see the connection checklist)';$('#roadmap').style.display='none';return}
+ if(!RM.configured.ok){$('#rm_head').textContent='· set the board and frame in ⚙ Settings';$('#roadmap').style.display='none';return}
+ $('#roadmap').style.display='';const b=RM.store.board||{};
+ $('#rm_head').textContent='· '+(b.frame||RM.configured.frame)+(b.read_at?' · read '+fmt(b.read_at):' · board not read yet');
+ const busy=running('roadmap');for(const id of ['#rm_parsebtn','#rm_readbtn','#rm_prevbtn'])$(id).disabled=busy;
+ $('#rm_parsebtn').textContent=busy?'Working…':'Read these notes';if(busy)$('#rm_postbtn').disabled=true;
+ const key=JSON.stringify(RM.store);if(key===rmRendered)return;rmRendered=key;   // only redraw rows when the store changes - never under your cursor
+ $('#rm_board').innerHTML=b.read_at?`<b>${esc(b.frame||'')}</b>${b.url?` · <a href="${esc(b.url)}" target="_blank">open board</a>`:''} · lanes: ${(b.lanes||[]).map(esc).join(', ')||'?'} · columns: ${(b.columns||[]).map(esc).join(', ')||'?'} · ${(b.existing||[]).length} cards on it`:'Press <b>Read board</b> once so the lane and column choices match the frame.';
+ if(document.activeElement!==$('#rm_paste'))$('#rm_paste').value=RM.store.pasted||'';
+ renderRmRows();renderRmPreview()}
+function renderRmRows(){const rows=rmRows(),b=(RM.store.board||{}),lanes=b.lanes||[],cols=b.columns||[];
+ const opt=(list,v)=>['<option value="">—</option>'].concat((list.includes(v)||!v?list:[v].concat(list)).map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`)).join('');
+ const head='<div class="rmrow rmhead"><div>title</div><div>detail</div><div>owners</div><div>lane</div><div>column</div><div>state</div><div></div></div>';
+ $('#rm_rows').innerHTML=rows.length?head+rows.map((r,i)=>{const d=r.posted_id?'disabled':'';return `<div class="rmrow${r.posted_id?' snoozed':''}">
+  <input value="${esc(r.title)}" placeholder="what" onchange="rmSet(${i},'title',this.value)" ${d}>
+  <input value="${esc(r.detail)}" placeholder="detail" onchange="rmSet(${i},'detail',this.value)" ${d}>
+  <input value="${esc(r.owners)}" placeholder="who" onchange="rmSet(${i},'owners',this.value)" ${d}>
+  <select onchange="rmSet(${i},'lane',this.value)" ${d}>${opt(lanes,r.lane)}</select>
+  <select onchange="rmSet(${i},'column',this.value)" ${d}>${opt(cols,r.column)}</select>
+  <select onchange="rmSet(${i},'state',this.value)" ${d}>${['not_started','in_progress','done'].map(s=>`<option value="${s}" ${s===r.state?'selected':''}>${s.replace('_',' ')}</option>`).join('')}</select>
+  <div>${r.posted_id?'<span class="pill" title="already on the board">✓</span>':`<button onclick="rmDrop(${i})" title="remove row">×</button>`}</div></div>`}).join(''):'<div class="empty">no rows yet — paste notes and press Read these notes, or add a row by hand</div>'}
+function rmSet(i,f,v){rmRows()[i][f]=v;rmDisarm();rmSave()}
+function rmDrop(i){rmRows().splice(i,1);rmRendered='';paintRm();rmDisarm();rmSave()}
+function rmAddRow(){const b=RM.store.board||{};rmRows().push({title:'',detail:'',owners:'',lane:(b.lanes||[])[0]||'',column:(b.columns||[])[0]||'',state:'not_started',source:'hand'});rmRendered='';paintRm();rmDisarm();rmSave()}
+function rmTouch(){rmDisarm();rmSave()}
+function rmSave(){clearTimeout(rmSaveT);rmSaveT=setTimeout(async()=>{try{RM.store.pasted=$('#rm_paste').value;rmRendered=JSON.stringify(RM.store);await api('/api/roadmap',{mode:'save',rows:rmRows(),pasted:RM.store.pasted})}catch(e){$('#rm_msg').textContent='not saved: '+e.message}},500)}
+async function rmJob(mode,extra){try{$('#rm_msg').textContent='';const r=await api('/api/roadmap',Object.assign({mode},extra||{}));if(r.started===false){$('#rm_msg').textContent='already running';return}J.roadmap={running:true};paintRm()}catch(e){$('#rm_msg').textContent=e.message.replace(/^.*-> \d+ /,'')}}
+function rmRead(){rmJob('read')}
+function rmParse(){const p=$('#rm_paste').value.trim();if(!p){$('#rm_msg').textContent='paste some notes first';return}clearTimeout(rmSaveT);rmJob('parse',{pasted:p})}
+function rmPreview(){rmDisarm();rmJob('preview')}
+function rmDisarm(){rmArmed=false;clearTimeout(rmArmT);const b=$('#rm_postbtn');if(b){b.disabled=true;b.textContent='Add to the roadmap'}if($('#rm_armmsg'))$('#rm_armmsg').textContent=''}
+function renderRmPreview(){const pv=RM.store.preview||{},plan=pv.plan||[],rows=rmRows();
+ if(!pv.at||!plan.length){$('#rm_preview').innerHTML='';rmDisarm();return}
+ const byId=Object.fromEntries(rows.map(r=>[r.id,r]));
+ $('#rm_preview').innerHTML=`<div>Preview ${fmt(pv.at)}:</div>`+plan.map(p=>`<div>${p.action==='add'?'➕':'⏭'} <b>${esc((byId[p.id]||{}).title||p.id)}</b> — ${esc(p.why||p.action)}</div>`).join('');
+ const adds=plan.filter(p=>p.action==='add').length;const b=$('#rm_postbtn');
+ if(adds&&!running('roadmap')){b.disabled=false;b.textContent=`Add ${adds} to the roadmap`}}
+async function rmPost(){if(!rmArmed){rmArmed=true;$('#rm_armmsg').textContent='press again within 6s — this adds cards to a board other people share';clearTimeout(rmArmT);rmArmT=setTimeout(()=>{rmArmed=false;$('#rm_armmsg').textContent=''},6000);return}
+ rmArmed=false;$('#rm_armmsg').textContent='';await rmJob('build',{confirm:true})}
 async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
  if(willSend(l)&&!confirm(`This will SEND a chase to ${l.owner} right now, in your name, without you seeing it first.\n\nSend?`))return;
  if(!willSend(l)&&l.last_chase_at&&!confirm(`You already ${l.last_chase_mode==='send'?'sent':'drafted'} a chase for ${l.owner} on ${fmt(l.last_chase_at)}.\nIf a draft is still unsent this will create a second one.\n\nDraft another?`))return;
@@ -319,6 +441,8 @@ async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
 // ---------- settings form: painted only on first open and after Save, never by background ticks ----------
 function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_use_slack').checked=!!C.use_slack;$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
  if($('#cfg_vault'))$('#cfg_vault').value=C.vault_path||'';
+ $('#cfg_rm_board').value=C.roadmap_board||'';$('#cfg_rm_frame').value=C.roadmap_frame||'';
+ $('#cfg_slack_src').textContent=(C.agent||'claude')==='claude'&&C.slack_source?'Slack route detected: '+(C.slack_source==='connector'?'claude.ai connector':'Slack plugin')+' — the refresh uses the matching tools automatically.':'';
  if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=(C.agent||'claude')==='grok'?'':'none';
  $('#cfg_ext').checked=!!C.chase_external_email;$('#cfg_send_int').checked=!!C.send_internal;$('#cfg_send_ext').checked=!!C.send_external;$('#cfg_domains').value=(C.internal_domains||[]).join(', ');
  const A=C.auto_chase||{};$('#cfg_auto').checked=!!A.enabled;$('#cfg_auto_days').value=A.after_workdays||3;$('#cfg_auto_max').value=A.max_chases||3;
@@ -333,10 +457,10 @@ function paintVoice(){if(V&&haveVoice()){$('#voice_meta').textContent='learned '
 async function saveCfg(){try{const tone={};document.querySelectorAll('[data-tone]').forEach(t=>tone[t.dataset.tone]=t.value);
  // people: radios in the table win; the JSON box is the fallback for adding/removing entries
  let people=JSON.parse($('#cfg_people').value);Object.keys(C.people||{}).forEach((n,i)=>{const v=document.querySelector(`input[name="pp${i}"]:checked`);if(v&&people[n])people[n].level=v.value});
- const body={agent:$('#cfg_agent').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),vault_path:($('#cfg_vault')&&$('#cfg_vault').value.trim())||'',chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
+ const body={agent:$('#cfg_agent').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),vault_path:($('#cfg_vault')&&$('#cfg_vault').value.trim())||'',roadmap_board:$('#cfg_rm_board').value.trim(),roadmap_frame:$('#cfg_rm_frame').value.trim(),chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
   exclude_people:$('#cfg_excl_people').value.split(',').map(s=>s.trim()).filter(Boolean),exclude_topics:$('#cfg_excl_topics').value.split(',').map(s=>s.trim()).filter(Boolean)};
  const agentChanged=(C.agent||'claude')!==body.agent,slackChanged=!!C.use_slack!==body.use_slack;
- await api('/api/config',body);$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString();await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message}}
+ await api('/api/config',body);$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString();await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);await loadRm();tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message}}
 async function saveTime(){$('#time_msg').textContent='updating task…';const r=await api('/api/schedule',{time:$('#cfg_time').value});$('#time_msg').textContent=r.ok?'scheduled weekdays at '+$('#cfg_time').value:'failed: '+(r.error||r.out)}
 async function learnVoice(){if(!havePeople()||running('voice'))return;kicked.voice=true;await api('/api/voice',{});J.voice={running:true};paintButtons(stage())}
 async function startOver(){if(!confirm('Wipe the list, people picks and learned tone, and go back to step 1?'))return;await api('/api/reset',{});DOC=null;docAt=0;P=null;peopleRendered='';Object.keys(kicked).forEach(k=>delete kicked[k]);formPainted=false;await loadCfg();showTab('home');loop()}
@@ -349,7 +473,7 @@ let wasRunning=false,loopT=null;
 async function loop(){clearTimeout(loopT);try{
   await loadState();
   const now=Object.values(J).some(j=>j.running);
-  if(wasRunning&&!now)await loadCfg();          // a job just finished: pick up new people/voice/config
+  if(wasRunning&&!now){await loadCfg();await loadDaylog();await loadRm()}   // a job just finished: pick up new people/voice/config/day log/roadmap
   wasRunning=now;
   const st=stage();
   if((st==='connect'||st==='checking')&&Date.now()-docAt>60000)await doctor(false);
@@ -357,5 +481,5 @@ async function loop(){clearTimeout(loopT);try{
  }catch(e){banner('Something went wrong talking to the app: '+e.message+' — if it keeps happening, close this tab and open Open Loops again.')}
  const st=stage();loopT=setTimeout(loop,(J&&Object.values(J).some(j=>j.running))||st!=='ready'?4000:60000)}
 document.addEventListener('visibilitychange',()=>{if(!document.hidden)loop()});
-(async()=>{try{await loadCfg();await loadState();await doctor(false)}catch(e){banner('Could not start: '+e.message)}loop()})();
+(async()=>{try{await loadCfg();await loadState();await doctor(false);await loadDaylog();await loadRm()}catch(e){banner('Could not start: '+e.message)}loop()})();
 </script></body></html>

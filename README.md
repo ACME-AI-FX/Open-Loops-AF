@@ -73,3 +73,19 @@ Guides: [GETTING-STARTED.md](GETTING-STARTED.md) · [INSTALL.md](INSTALL.md) (Gr
 What is planned next: [ROADMAP.md](ROADMAP.md).
 
 MIT licence. WhatsApp is not possible (no API for personal accounts).
+
+## What's in the folder
+
+| Path | What it does |
+|---|---|
+| `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`) |
+| `openloops/refresh.py` | finds new asks, checks open threads for replies (`--slack-only` for a quick Slack pass) |
+| `openloops/chase.py` · `autochase.py` | drafts (or, if you tick the boxes, sends) a nudge; the optional timer |
+| `openloops/voice.py` · `people.py` | learns how you write to each person; finds who you talk to most |
+| `openloops/daylog.py` | what moved today, digest + optional first-person write-up |
+| `openloops/roadmap.py` | paste standup notes, add cards to a Miro roadmap frame (needs the Miro plugin) |
+| `openloops/doctor.py` | the "are you connected?" check (`python -m openloops.doctor`) |
+| `config.json` · `state.json` | your settings and your list (private, gitignored) · `state/logs/` one log per run |
+| `scripts/` | weekday scheduled refresh (Task Scheduler / launchd) |
+
+Read `INSTALL.md` §7 before installing: the Slack plugin-vs-connector gotcha is the one that bites.

@@ -4,6 +4,7 @@
   "owner_name": "",
   "use_slack": false,
   "slack_self_id": "",
+  "slack_source": "",
   "internal_domains": [
     "example.com"
   ],
@@ -13,7 +14,7 @@
     "enabled": false,
     "after_workdays": 3,
     "max_chases": 3,
-    "note": "When enabled, the 08:40 run chases any waiting loop quiet for after_workdays (from the ask or the last chase), up to max_chases times. Each card has an 'auto: on/off' switch. Draft vs send follows send_internal / send_external."
+    "note": "When enabled, the morning run chases any waiting loop quiet for after_workdays (from the ask or the last chase), up to max_chases times. Each card has an 'auto: on/off' switch. Draft vs send follows send_internal / send_external."
   },
   "send_external": false,
   "tone": {
@@ -33,6 +34,8 @@
   "exclude_topics": [],
   "voice_sample_people": [],
   "vault_path": "",
+  "roadmap_board": "",
+  "roadmap_frame": "",
   "send_internal": false,
   "send_note": "send_internal / send_external: when ticked, chases to that group are SENT immediately (Slack message / Gmail reply) instead of drafted. Internal = email domain in internal_domains (or a Slack contact with no email). External = anyone else, e.g. vendors and agencies."
 }

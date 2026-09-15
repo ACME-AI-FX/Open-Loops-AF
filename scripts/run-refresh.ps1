@@ -1,5 +1,5 @@
 <#
-.SYNOPSIS  Unattended refresh of open loops (Task Scheduler, weekdays 08:40).
+.SYNOPSIS  Unattended refresh of open loops (Task Scheduler, weekdays 09:15 by default).
 #>
 $ErrorActionPreference = "Continue"
 $Root = Split-Path -Parent $PSScriptRoot

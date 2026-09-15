@@ -1,5 +1,8 @@
 """Create a chase DRAFT for one loop via a headless agent run (agent.py). Never sends.
 
+Writes back through store.update_state so a note or snooze added from the page while the
+agent was running is kept.
+
     python3 -m openloops.chase <loop id>
 
 Driven by config.json:
@@ -12,9 +15,9 @@ from pathlib import Path
 
 from . import agent
 from .paths import ROOT
-STATE = ROOT / "state.json"
-CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8-sig"))
-VOICE = json.loads((ROOT / "voice.json").read_text(encoding="utf-8-sig")) if (ROOT / "voice.json").exists() else {}
+from .store import load_cfg, load_state, read_json, update_state
+CFG = load_cfg()
+VOICE = read_json(ROOT / "voice.json", {}) or {}
 LOG = ROOT / "state" / "logs"
 LOG.mkdir(parents=True, exist_ok=True)
 
@@ -67,7 +70,7 @@ def is_external(loop):
 
 
 def main(loop_id):
-    s = json.loads(STATE.read_text(encoding="utf-8-sig"))
+    s = load_state()
     l = next((x for x in s["loops"] if x["id"] == loop_id), None)
     if not l:
         print("no such loop"); sys.exit(1)
@@ -114,10 +117,13 @@ def main(loop_id):
     (LOG / f"chase-{loop_id}-{datetime.now():%Y-%m-%d_%H%M}.log").write_text(p.stdout + "\n--- stderr ---\n" + p.stderr, encoding="utf-8")
     print(f"[{mode} | {level}{' | external' if ext else ''}]\n" + p.stdout[-1200:])
     if f"{marker}:" in p.stdout:
-        l["chases"] = n
-        l["last_chase_at"] = datetime.now().isoformat(timespec="minutes")
-        l["last_chase_mode"] = mode
-        STATE.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding="utf-8")
+        def mark(fresh):  # re-read at write time so page edits made meanwhile survive
+            for x in fresh["loops"]:
+                if x["id"] == loop_id:
+                    x["chases"] = n
+                    x["last_chase_at"] = datetime.now().isoformat(timespec="minutes")
+                    x["last_chase_mode"] = mode
+        update_state(mark)
     else:
         sys.exit(1)
 

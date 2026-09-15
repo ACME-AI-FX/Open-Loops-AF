@@ -5,7 +5,7 @@
 # Usage: scripts/register-task.sh [--at HH:MM] [--remove]
 set -e
 
-AT="08:40"
+AT="09:15"
 REMOVE=0
 while [[ $# -gt 0 ]]; do
     case "$1" in

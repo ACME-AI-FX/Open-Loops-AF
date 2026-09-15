@@ -9,11 +9,12 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .paths import PKG, ROOT
+from .store import norm_date, read_json, write_json
 STATE = ROOT / "state.json"
 INDEX = PKG / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
-EDITABLE = ("agent", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path")
+EDITABLE = ("agent", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "slack_source", "roadmap_board", "roadmap_frame")
 import os
 PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
 WIN = sys.platform == "win32"
@@ -23,10 +24,14 @@ IDLE_EXIT_S = 3 * 3600  # server quits after 3h with no page activity
 last_seen = time.time()
 PEOPLEF = ROOT / "people_suggested.json"
 
+def cfg():
+    return read_json(CONFIG, {}) or {}
+
+
 def history_days():
     """How far back the AI reads (Settings > History). Drives the first-scan cursor and who's-who."""
     try:
-        return min(int(json.loads(CONFIG.read_text(encoding="utf-8-sig")).get("history_days") or 30), 365)
+        return min(int(cfg().get("history_days") or 30), 365)
     except Exception:
         return 30
 
@@ -46,18 +51,18 @@ if not STATE.exists():
 (ROOT / "state" / "logs").mkdir(parents=True, exist_ok=True)
 
 doctor_cache = {"at": 0, "result": None}
-jobs = {"refresh": {"running": False, "log": ""}, "chase": {"running": False, "log": ""}, "voice": {"running": False, "log": ""}, "people": {"running": False, "log": ""}, "standing": {"running": False, "log": ""}}
+JOB_MOD = {"refresh": "refresh", "chase": "chase", "voice": "voice", "people": "people", "standing": "close_standing",
+           "daylog": "daylog", "roadmap": "roadmap"}
+jobs = {k: {"running": False, "log": ""} for k in JOB_MOD}
 
 
 def load():
-    return json.loads(STATE.read_text(encoding="utf-8-sig"))
+    return read_json(STATE, {"cursor": None, "last_refresh": None, "loops": []})
 
 
 def save(s):
-    STATE.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(STATE, s)
 
-
-JOB_MOD = {"refresh": "refresh", "chase": "chase", "voice": "voice", "people": "people", "standing": "close_standing"}
 
 def run_job(name, extra=None):
     if jobs[name]["running"]:
@@ -107,18 +112,61 @@ class H(BaseHTTPRequestHandler):
             s["loops"] = list(s.get("loops") or []) + vault_loops
             self._json({"state": s, "jobs": jobs, "today": date.today().isoformat()})
         elif self.path == "/api/config":
-            voice = json.loads(VOICEF.read_text(encoding="utf-8-sig")) if VOICEF.exists() else None
-            people = json.loads(PEOPLEF.read_text(encoding="utf-8-sig")) if PEOPLEF.exists() else None
-            self._json({"config": json.loads(CONFIG.read_text(encoding="utf-8-sig")), "voice": voice, "people_suggested": people})
+            self._json({"config": cfg(), "voice": read_json(VOICEF), "people_suggested": read_json(PEOPLEF)})
+        elif self.path.split("?")[0] == "/api/daylog":
+            from . import daylog
+            q = self._query()
+            self._json(daylog.status(q.get("date") or None))
+        elif self.path.split("?")[0] == "/api/daylog/page":
+            # served through the app: a file:// link from an http:// page is blocked by browsers
+            from . import daylog
+            q = self._query()
+            day = q.get("date") or date.today().isoformat()
+            pg = daylog.page_path(day)
+            if not pg.exists():
+                return self._json({"error": f"no day log for {day} yet - press Write it up"}, 404)
+            b = pg.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+        elif self.path == "/api/roadmap":
+            from . import roadmap
+            self._json({"store": roadmap.load(), "configured": roadmap.configured(),
+                        "miro": bool((doctor_cache.get("result") or {}).get("miro"))})
         else:
             self._json({"error": "not found"}, 404)
+
+    def _query(self):
+        from urllib.parse import parse_qs, urlsplit
+        return {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
 
     def do_POST(self):
         global doctor_cache
         n = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(n) or b"{}")
         if self.path == "/api/refresh":
-            return self._json({"started": run_job("refresh")})
+            return self._json({"started": run_job("refresh", ["--slack-only"] if body.get("slack_only") else None)})
+        if self.path == "/api/daylog":
+            return self._json({"started": run_job("daylog", ["--digest-only"] if body.get("digest_only") else None)})
+        if self.path == "/api/roadmap":
+            from . import roadmap
+            mode = body.get("mode")
+            if mode == "save":
+                # staging rows live in state/roadmap.json, never in state.json (refresh rewrites that)
+                roadmap.stage(rows=body.get("rows"), pasted=body.get("pasted"))
+                return self._json({"ok": True})
+            if mode not in roadmap.MODES:
+                return self._json({"ok": False, "error": "unknown mode"}, 400)
+            if not roadmap.configured()["ok"]:
+                return self._json({"ok": False, "error": "set the board and frame in Settings first"}, 400)
+            if mode == "parse" and body.get("pasted") is not None:
+                roadmap.stage(pasted=body.get("pasted"))
+            if mode == "build" and not body.get("confirm"):
+                # adds cards to a board other people share - the page arms this for a few seconds after a preview
+                return self._json({"ok": False, "error": "confirm required"}, 400)
+            return self._json({"started": run_job("roadmap", [mode] + (["--confirm"] if mode == "build" else []))})
         if self.path == "/api/doctor":
             import time as _t
             if body.get("force") or _t.time() - doctor_cache["at"] > 55:
@@ -154,30 +202,30 @@ class H(BaseHTTPRequestHandler):
                 r = subprocess.run(["bash", str(ROOT / "scripts" / "register-task.sh"), "--at", t],
                                    capture_output=True, text=True, encoding="utf-8", errors="replace")
             if r.returncode == 0:
-                cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
-                cfg["refresh_time"] = t
-                CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+                c = cfg()
+                c["refresh_time"] = t
+                write_json(CONFIG, c)
             return self._json({"ok": r.returncode == 0, "out": (r.stdout + r.stderr)[-500:]})
         if self.path == "/api/voice":
             return self._json({"started": run_job("voice")})
         if self.path == "/api/people":
             return self._json({"started": run_job("people")})
         if self.path == "/api/config":
-            cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
+            c = cfg()
             for k, v in body.items():
                 if k in EDITABLE:
-                    cfg[k] = v
-            CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+                    c[k] = v
+            write_json(CONFIG, c)
             return self._json({"ok": True})
         if self.path == "/api/reset":
             # "Start over": back to the state a brand-new user sees, keeping only name/domains/tone settings.
             for f in (STATE, VOICEF, PEOPLEF):
                 if f.exists():
                     f.unlink()
-            cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
+            c = cfg()
             for k in ("people", "voice_sample_people", "slack_self_id"):
-                cfg[k] = {} if k == "people" else ([] if k == "voice_sample_people" else "")
-            CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+                c[k] = {} if k == "people" else ([] if k == "voice_sample_people" else "")
+            write_json(CONFIG, c)
             STATE.write_text(fresh_state(), encoding="utf-8")
             doctor_cache = {"at": 0, "result": None}
             return self._json({"ok": True})
@@ -210,9 +258,8 @@ class H(BaseHTTPRequestHandler):
                 notes = (body.get("notes") or "").strip()[:2000]
                 if not ask:
                     return self._json({"error": "need something to do"}, 400)
-                cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
                 email = None
-                for name, p in (cfg.get("people") or {}).items():
+                for name, p in (cfg().get("people") or {}).items():
                     if name.lower() == owner.lower():
                         owner = name
                         email = (p or {}).get("email")
@@ -225,7 +272,7 @@ class H(BaseHTTPRequestHandler):
                     "channel": "note", "thread": None, "link": None,
                     "asked_at": now.isoformat(timespec="minutes"),
                     "status": "needs_me", "inbound": True, "manual": True,
-                    "notes": notes, "last_reply_at": None, "reply_snippet": None,
+                    "notes": notes, "links": [], "last_reply_at": None, "reply_snippet": None,
                     "chases": 0, "snooze_until": None,
                 })
                 save(s)
@@ -240,7 +287,10 @@ class H(BaseHTTPRequestHandler):
                         lp["status"] = "needs_me" if lp.get("channel") == "note" or lp.get("manual") else "waiting"
                         lp["snooze_until"] = None
                     elif act == "snooze":
-                        lp["snooze_until"] = body["until"]
+                        try:
+                            lp["snooze_until"] = norm_date(body.get("until"))
+                        except ValueError as e:
+                            return self._json({"error": str(e)}, 400)
                     elif act == "unsnooze":
                         lp["snooze_until"] = None
                     elif act == "auto_off":
@@ -249,6 +299,15 @@ class H(BaseHTTPRequestHandler):
                         lp["auto_off"] = False
                     elif act == "note":
                         lp["notes"] = (body.get("notes") or "").strip()[:2000]
+                    elif act == "add_link":
+                        url = (body.get("url") or "").strip()
+                        if not url.startswith("http"):
+                            return self._json({"error": "link must start with http"}, 400)
+                        links = lp.setdefault("links", [])
+                        if not any(x.get("url") == url for x in links):
+                            links.append({"url": url, "label": (body.get("label") or "").strip()[:60]})
+                    elif act == "drop_link":
+                        lp["links"] = [x for x in lp.get("links") or [] if x.get("url") != body.get("url")]
             save(s)
             return self._json({"ok": True})
         self._json({"error": "not found"}, 404)

@@ -3,6 +3,10 @@
 Compared: `C:\Users\oscarc\Downloads\Open-Loops-share` (colleague, dated 15 Sep 2026) against
 branch `combining-feature-updates` (HEAD `6c0e8c0`). Three-way, using `ed97a64` (v0.1) as the base.
 
+> **Status (15 Sep 2026):** everything in sections 1 and 5 is implemented on this branch, including
+> optional Day log and Roadmap cards designed fresh (no external folders needed; Miro via the official
+> Claude plugin). See `docs/superpowers/specs/2026-09-15-colleague-merge-daylog-roadmap-design.md`.
+
 ## Headline
 
 **Their copy forked from a pre-v0.1 internal build, not from v0.1.** It has no `agent.py`,
