@@ -74,6 +74,8 @@ bash packaging/macos/build-dmg.sh --ref main --version 0.1 --out dist/OpenLoops.
 ## Signing
 
 Neither installer is code-signed, so Windows shows a SmartScreen "unknown publisher" warning and macOS an
-unidentified-developer warning. Removing those needs a Windows code-signing certificate (Inno's
-`SignTool` setting) and an Apple Developer ID plus notarisation (`codesign` / `notarytool` in `build-dmg.sh`).
-The Mac app is ad-hoc signed so macOS does not call it "damaged".
+unidentified-developer warning. On Windows, a code-signing certificate (Inno's `SignTool` setting) names the
+publisher in that dialog, but SmartScreen reputation is separate and builds over time from downloads, so the
+warning can persist for a while even with an OV or EV certificate. On Mac, an Apple Developer ID plus
+notarisation (`codesign` / `notarytool` in `build-dmg.sh`) removes the warning. The Mac app is ad-hoc signed
+so macOS does not call it "damaged".
