@@ -98,7 +98,13 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 - **Home is a stack of collapsible sections**, all closed until you open them, and the browser remembers which you left open.
   *Add a note* stays on top. Then **Needs me** (they replied, you owe a response), **Waiting on them** (your ask is outstanding:
   green <2 workdays, amber 2–4, red >4), **Day log**, **Roadmap**, and **Snoozed / done** last. Each row shows its count and a
-  one-line summary (e.g. "7 · 3 fresh, 2 amber, 2 red"), so you can read the state of play without opening anything.
+  one-line summary (e.g. "7 · 4 people · 3 fresh, 2 amber, 2 red"), so you can read the state of play without opening anything.
+- Inside *Needs me* and *Waiting on them* the loops are grouped **by person**: one row each, with a colour
+  block per loop (age) and a short line on what they are about; click the row for the cards. Cards carry a
+  **priority** select (high / normal / low, guessed by the refresh, yours once you change it) and lists can
+  be sorted oldest-first or by priority.
+- A **Console** section sits at the bottom of both tabs: a timestamped record of checks, jobs and errors, with
+  *Copy*, *Copy all* (adds build, port, last check and job output from `/api/diag`) and *Clear*.
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
 - **done / snooze / reopen** are local only, and each one shows a toast with **Undo** for a few seconds. Snooze offers
   tomorrow / 2 days / next Monday / a week or a date. Recently-closed loops are still watched for 5 days and reopen if the

@@ -41,6 +41,7 @@ last_seen = time.time()
 # without a goodbye (browser crash, laptop closed) are forgotten after PAGE_STALE_S.
 pages = {}
 bye_at = 0.0
+STARTED = datetime.now().isoformat(timespec="seconds")
 quit_requested = False
 quit_now = False  # `--stop --now`: do not wait for a running job, cut it short
 PAGE_GRACE_S = 4
@@ -157,6 +158,15 @@ class H(BaseHTTPRequestHandler):
                         "pages": len(pages), "quitting": quit_requested})  # who is holding the server up
         elif self.path == "/api/config":
             self._json({"config": cfg(), "voice": read_json(VOICEF), "people_suggested": read_json(PEOPLEF)})
+        elif self.path == "/api/diag":  # what the Console's "Copy all" pastes: enough to debug from a screenshot-free report
+            c = cfg()
+            stamp = ROOT / "INSTALLED.txt"
+            dl = ROOT / "state" / "logs" / "doctor-last.log"
+            self._json({"python": sys.version.split()[0], "platform": sys.platform, "port": PORT, "root": str(ROOT),
+                        "build": stamp.read_text(encoding="utf-8").strip() if stamp.exists() else "checkout",
+                        "up_since": STARTED, "agent": c.get("agent") or "claude", "model": c.get("model") or "",
+                        "pages": len(pages), "jobs": {k: {"running": j["running"], "rc": j.get("rc"), "tail": (j.get("log") or "")[-1200:]} for k, j in jobs.items()},
+                        "doctor": doctor_cache["result"], "doctor_log": dl.read_text(encoding="utf-8", errors="replace")[-2000:] if dl.exists() else ""})
         elif self.path.split("?")[0] == "/api/daylog":
             from . import daylog
             q = self._query()
@@ -246,12 +256,16 @@ class H(BaseHTTPRequestHandler):
             import time as _t
             if body.get("force") or _t.time() - doctor_cache["at"] > 55:
                 args = [sys.executable, "-m", "openloops.doctor"] + (["--detect"] if body.get("detect") else [])
-                try:
-                    r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
-                                       stdin=subprocess.DEVNULL, timeout=240)
-                    out, err, rc = r.stdout, r.stderr, r.returncode
-                except Exception as e:  # timeout, or the interpreter could not be started
-                    out, err, rc = "", f"{type(e).__name__}: {e}", -1
+                for attempt in (1, 2):  # a check that produced nothing gets one quiet retry before anyone hears about it
+                    try:
+                        r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                           stdin=subprocess.DEVNULL, timeout=240)
+                        out, err, rc = r.stdout, r.stderr, r.returncode
+                    except Exception as e:  # timeout, or the interpreter could not be started
+                        out, err, rc = "", f"{type(e).__name__}: {e}", -1
+                    if out.strip():
+                        break
+                    _t.sleep(2)
                 try:
                     (ROOT / "state" / "logs").mkdir(parents=True, exist_ok=True)
                     (ROOT / "state" / "logs" / "doctor-last.log").write_text(
@@ -261,8 +275,9 @@ class H(BaseHTTPRequestHandler):
                 try:
                     doctor_cache = {"at": _t.time(), "result": json.loads(out.strip().splitlines()[-1])}
                 except Exception:
-                    why = (out + err).strip()[-300:] or f"the check produced no output (exit code {rc}). Full record: state/logs/doctor-last.log"
-                    doctor_cache = {"at": _t.time(), "result": {"all_ok": False, "steps": [{"id": "err", "ok": False, "title": "Check failed", "fix": why}]}}
+                    why = (out + err).strip()[-300:] or f"the check produced no output (exit code {rc})"
+                    # not a connection problem: the checker itself did not answer. The page keeps its last good answer.
+                    doctor_cache = {"at": _t.time(), "result": {"all_ok": False, "error": why, "steps": [], "rc": rc}}
             return self._json(doctor_cache["result"])
         if self.path == "/api/open-claude":
             # opens a terminal running the configured agent so the user can sign in / connect
@@ -389,6 +404,11 @@ class H(BaseHTTPRequestHandler):
                             return self._json({"error": str(e)}, 400)
                     elif act == "unsnooze":
                         lp["snooze_until"] = None
+                    elif act == "priority":
+                        pr = body.get("priority")
+                        if pr not in ("high", "normal", "low"):
+                            return self._json({"error": "priority is high, normal or low"}, 400)
+                        lp["priority"], lp["priority_by"] = pr, "you"
                     elif act == "auto_off":
                         lp["auto_off"] = True
                     elif act == "auto_on":

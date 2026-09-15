@@ -37,7 +37,11 @@ When the required rows are ticked the checklist disappears and your list starts 
 - Double-click **Open Loops** on the Desktop, or the same icon in the Dock. It refreshes itself every weekday morning at 09:15, so it's ready when you sit down.
 - The page is a stack of sections, closed until you open them (it remembers which). **Add a note** stays on top.
 - **Needs me** — people who've replied and are waiting on *you*. The row shows the count even when closed.
-- **Waiting on them** — things you've asked for. Green = recent, amber = a few days, red = getting old.
+- **Waiting on them** — things you've asked for.
+- Both lists show **one row per person**: their name, a small block per loop (green = recent, amber = a
+  few days, red = getting old), and a line on what it's about. Click the person to open the cards. Each
+  card has a **priority** (high / normal / low): the refresh guesses it, you can correct it, and your
+  choice sticks. *sort* at the top of a list switches between oldest first and priority.
 - **draft chase** — writes a friendly nudge in your voice and puts it in the conversation as an unsent draft. You read it, you press send.
 - **done** when it's sorted. **snooze** to hide it for a bit. Both give you a few seconds to **Undo**. Notes,
   links and the auto-chase switch are under **more ▾** on each card.
@@ -65,3 +69,8 @@ automatically; every item has an *auto: on/off* switch so you can leave one alon
 - It uses your normal Claude subscription — no extra accounts, no API keys.
 - WhatsApp isn't supported (WhatsApp doesn't allow it).
 - If something looks wrong, ⚙ Settings → History → "Last job output" shows what happened, and the `state/logs` folder keeps a record.
+- Reporting a problem? Open **Console** at the bottom of the page and press **Copy all**: that is everything
+  someone needs to help you (what the page did, the last check, the last job output), with nothing from
+  your messages in it.
+- If the page says *I couldn't run the connection check*, nothing is wrong with your accounts: the checker
+  itself didn't answer. It retries by itself; **Retry** runs it now.

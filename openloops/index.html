@@ -61,6 +61,18 @@ details.cfg[open]>summary{border-bottom:1px solid var(--line);border-radius:8px 
 details.cfg.danger{border-color:var(--r)}details.cfg>.body>.card:last-child,details.cfg>.body>div>.card:last-child{margin-bottom:10px}details.cfg>.body .empty{padding:4px 0 12px}#lists details.cfg{margin-bottom:8px}
 .cfg-head{display:flex;align-items:baseline;gap:12px;margin:0 0 10px}.cfg-head h2{margin:0;flex:1}.cfg-head button{min-height:32px;padding:0 8px;font-size:12px}
 @media(max-width:720px){details.cfg>summary{flex-wrap:wrap;gap:2px 12px}details.cfg>summary .sub{flex-basis:100%;padding-left:26px;white-space:normal}}
+/* person rows: one line per person, one block per loop (colour = age), click to open the cards */
+.person{display:grid;grid-template-columns:150px auto minmax(0,1fr) auto;gap:12px;align-items:center;min-height:48px;padding:8px 14px;background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:6px;cursor:pointer}
+.person:hover{background:var(--bg)}.person.open{border-radius:8px 8px 0 0;margin-bottom:0}
+.person .who{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.person .bang{color:var(--r);font-weight:700;margin-left:4px}
+.blocks{display:flex;gap:3px;flex-wrap:wrap;max-width:118px}.blk{display:inline-block;width:10px;height:18px;border-radius:2px}
+.person .sum{min-width:0;font-size:13px}.person .sum .ln{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.person .tail{white-space:nowrap;margin:0}.person .chev{display:inline-block;transition:transform .15s}.person.open .chev{transform:rotate(180deg)}
+.person-cards{padding:8px 8px 2px;border:1px solid var(--line);border-top:0;border-radius:0 0 8px 8px;margin-bottom:8px;background:var(--bg)}.person-cards .card:last-child{margin-bottom:6px}
+.sortbar{display:flex;gap:4px;align-items:center;margin:0 0 8px}.sortbar button{min-height:28px;padding:2px 8px;font-size:12px}.sortbar button.on{color:var(--ink);border-color:var(--line);font-weight:600}
+select.pri{min-height:24px;font:inherit;font-size:11px;padding:0 2px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink)}select.pri.high{color:var(--r);font-weight:600}
+#con{max-height:260px;margin:0 0 12px;user-select:text}
+@media(max-width:720px){.person{grid-template-columns:1fr auto}.person .sum{grid-column:1/-1}.blocks{max-width:none}}
 #savebar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);margin:8px -24px 0;padding:10px 24px;display:flex;gap:10px;align-items:center;z-index:2}
 </style></head><body>
 <header><h1>Open Loops</h1>
@@ -90,6 +102,13 @@ details.cfg.danger{border-color:var(--r)}details.cfg>.body>.card:last-child,deta
  </div>
 
  <!-- stage: people -->
+ <!-- stage: checkfail - the checker did not answer; not a connection problem, and never a raw exit code in the user's face -->
+ <div id="st_checkfail" class="box" style="display:none">
+  <h3>I couldn't run the connection check</h3>
+  <div class="sub" style="margin-bottom:10px">Nothing is wrong with your Slack or email: the checker itself didn't answer. It usually works on the next try, and the page tries again by itself. If it keeps happening, the details are in the <a href="#" onclick="return conShow()">Console</a> at the bottom of the page: <b>Copy all</b> there gives you everything to paste into a report.</div>
+  <div style="display:flex;gap:8px;align-items:center"><button class="primary" onclick="doctor(true)">Retry</button><span class="sub" id="checkfail_msg"></span></div>
+ </div>
+
  <div id="st_people" class="box" style="display:none">
   <h3>2 · Who's who?</h3>
   <div class="sub" style="margin-bottom:8px">So nudges hit the right note, tell it who's senior to you, a peer, junior, or outside the company. It's looked at who you message most and taken a guess — correct anything that's wrong, then press Save. You can change this later in ⚙ Settings.</div>
@@ -310,6 +329,17 @@ details.cfg.danger{border-color:var(--r)}details.cfg>.body>.card:last-child,deta
   <button class="primary" id="cfg_save" onclick="saveCfg()">Save settings</button><span class="sub" id="cfg_msg"></span>
  </div>
 </div>
+<!-- the Console: a short record of what the page did, on both tabs, so a bug report is a paste rather than a screenshot -->
+<details class="cfg" id="console_wrap" ontoggle="cfgRemember(this)"><summary><b>Console</b><span class="sub" id="con_meta"></span></summary>
+ <div class="body">
+  <div style="display:flex;gap:6px;flex-wrap:wrap;align-items:center;margin-bottom:8px">
+   <button onclick="conCopy(false)" title="the lines below">Copy</button>
+   <button onclick="conCopy(true)" title="the lines below plus what the app knows about itself: build, port, last connection check, last job output">Copy all</button>
+   <button class="quiet" onclick="conClear()">Clear</button>
+   <span class="sub" id="con_msg"></span>
+  </div>
+  <pre id="con" class="log"></pre>
+ </div></details>
 </main>
 <script>
 const $=s=>document.querySelector(s);
@@ -321,10 +351,28 @@ const host=u=>{try{return new URL(u).host.replace(/^www\./,'')}catch(e){return u
 const linkify=s=>esc(s).replace(/https?:\/\/[^\s<]+/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u.length>48?host(u)+'/…':u}</a>`);
 // Every request carries this page's id; closing the tab sends a goodbye and the app quits a few seconds later (see app.py).
 const PAGE=Math.random().toString(36).slice(2)+Date.now().toString(36);let stopped=false;
-const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json','X-OL-Page':PAGE},body:JSON.stringify(b)}:{headers:{'X-OL-Page':PAGE}});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
-function banner(msg){const b=$('#banner');if(!msg){b.style.display='none';return}b.style.display='';b.textContent=msg}
+const api=async(u,b)=>{let r;try{r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json','X-OL-Page':PAGE},body:JSON.stringify(b)}:{headers:{'X-OL-Page':PAGE}})}catch(e){clog('no answer from '+u+': '+e.message);throw e}
+ if(!r.ok){const m=u+' -> '+r.status+' '+(await r.text()).slice(0,300);clog(m);throw new Error(m)}return r.json()};
+let lastBanner='';
+function banner(msg){const b=$('#banner');if(!msg){b.style.display='none';lastBanner='';return}b.style.display='';b.textContent=msg;if(msg!==lastBanner){lastBanner=msg;clog('banner: '+msg)}}
+// ---------- console: what the page did, timestamped, kept across reloads, one Copy away from a bug report ----------
+const CON_KEY='ol.console',CON_MAX=400;let CON=[];
+try{CON=JSON.parse(localStorage.getItem(CON_KEY)||'[]');if(!Array.isArray(CON))CON=[]}catch(e){CON=[]}
+function clog(msg){const line=new Date().toISOString().slice(0,19).replace('T',' ')+'  '+String(msg).replace(/\s+/g,' ').slice(0,400);CON.push(line);if(CON.length>CON_MAX)CON=CON.slice(-CON_MAX);
+ try{localStorage.setItem(CON_KEY,JSON.stringify(CON))}catch(e){}conPaint()}
+function conPaint(){const p=$('#con');if(!p)return;p.textContent=CON.join('\n')||'(nothing yet)';p.scrollTop=p.scrollHeight;
+ $('#con_meta').textContent=CON.length?`${CON.length} lines · last ${CON[CON.length-1].slice(11,19)}`:'what the page has been doing, for a bug report'}
+function conClear(){CON=[];try{localStorage.removeItem(CON_KEY)}catch(e){}conPaint();conSay('cleared')}
+function conSay(m){$('#con_msg').textContent=m;setTimeout(()=>{if($('#con_msg').textContent===m)$('#con_msg').textContent=''},4000)}
+function conShow(){const d=cfgShow('console_wrap');if(d)d.scrollIntoView({behavior:'smooth',block:'start'});return false}
+async function copyText(t){try{await navigator.clipboard.writeText(t);return true}catch(e){const a=document.createElement('textarea');a.value=t;a.style.position='fixed';a.style.opacity='0';document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(e2){}a.remove();return ok}}
+async function conCopy(all){let t=CON.join('\n');
+ if(all){try{const d=await api('/api/diag');t='--- Open Loops diagnostics '+new Date().toISOString().slice(0,19)+'\n'+JSON.stringify(d,null,1)+'\n\n--- console\n'+t}catch(e){t='--- diagnostics unavailable: '+e.message+'\n\n--- console\n'+t}}
+ conSay((await copyText(t))?'copied'+(all?' with diagnostics':''):'could not copy - select the text and press Ctrl+C')}
+window.addEventListener('error',e=>clog('script error: '+e.message+' ('+(e.filename||'').split('/').pop()+':'+e.lineno+')'));
+window.addEventListener('unhandledrejection',e=>clog('unhandled: '+((e.reason&&e.reason.message)||e.reason)));
 // ---------- feedback: a toast for every action (Doherty), with Undo where it is cheap (Postel) ----------
-function toast(msg,opt){opt=opt||{};const t=document.createElement('div');t.className='toast'+(opt.err?' err':'');t.textContent=msg;
+function toast(msg,opt){opt=opt||{};clog((opt.err?'error: ':'')+msg);const t=document.createElement('div');t.className='toast'+(opt.err?' err':'');t.textContent=msg;
  if(opt.undo){const b=document.createElement('button');b.textContent=opt.undoLabel||'Undo';b.onclick=async()=>{t.remove();try{await opt.undo()}catch(e){toast('Undo failed: '+e.message,{err:true})}};t.appendChild(b)}
  $('#toasts').appendChild(t);setTimeout(()=>t.remove(),opt.ms||(opt.undo?8000:4000));return t}
 // ---------- one dialog for snooze / note / link / vault close ----------
@@ -368,19 +416,21 @@ const havePeople=()=>!!(C&&C.people&&Object.keys(C.people).length);
 const haveVoice=()=>!!(V&&V.people&&Object.keys(V.people).length);
 
 // ---------- the stage machine: derived from facts on disk every tick, never from what fired earlier ----------
-function stage(){if(!DOC)return 'checking';if(!DOC.all_ok)return 'connect';if(!havePeople())return 'people';if(!haveVoice())return 'voice';if(!S.last_refresh)return 'scan';return 'ready'}
+function stage(){if(!DOC)return 'checking';if(DOC.error)return 'checkfail';if(!DOC.all_ok)return 'connect';if(!havePeople())return 'people';if(!haveVoice())return 'voice';if(!S.last_refresh)return 'scan';return 'ready'}
 const kicked={};   // which automatic jobs this page load has already started (so a failure shows instead of looping)
 let lastStage=null;
 const ORDER=[['connect','Connect'],['people',"Who's who"],['voice','Learn tone'],['scan','First scan'],['ready','Ready']];
 async function tick(){
- const st=stage();
- $('#steps').innerHTML=st==='ready'?'':st==='checking'?'<span class="sub"><span class="spin"></span>Checking your connections…</span>':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===st)>i?'done':k===st?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===st)>i?' ✓':''}</span>`).join('');
- for(const k of ['connect','people','auto'])$('#st_'+k).style.display='none';
+ const st=stage(),sv=st==='checkfail'?'connect':st;   // the steps bar treats "checker did not answer" as step 1, not as a new step
+ $('#steps').innerHTML=st==='ready'?'':st==='checking'?'<span class="sub"><span class="spin"></span>Checking your connections…</span>':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===sv)>i?'done':k===sv?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===sv)>i?' ✓':''}</span>`).join('');
+ for(const k of ['connect','checkfail','people','auto'])$('#st_'+k).style.display='none';
+ if(st!==lastStage)clog('stage: '+st);
  // Hick / Prägnanz: while setting up, the page is the setup - the lists, Day log and Roadmap wait until "ready"
  $('#lists').style.display=st==='ready'?'':'none';
- if(lastStage&&lastStage!=='ready'&&lastStage!=='checking'&&st==='ready')toast(`All set. Open Loops now refreshes itself every weekday morning at ${(C&&C.refresh_time)||'09:15'}; press Refresh any time for a fresh pass.`,{ms:10000});
+ if(lastStage&&!['ready','checking','checkfail'].includes(lastStage)&&st==='ready')toast(`All set. Open Loops now refreshes itself every weekday morning at ${(C&&C.refresh_time)||'09:15'}; press Refresh any time for a fresh pass.`,{ms:10000});
  lastStage=st;
  if(st==='connect')paintConnect();
+ else if(st==='checkfail'){$('#st_checkfail').style.display='';$('#checkfail_msg').textContent=docFails>1?`tried ${docFails} times`:''}
  else if(st==='people'){$('#st_people').style.display='';await stagePeople()}
  else if(st==='voice'||st==='scan'){$('#st_auto').style.display='';await stageAuto(st)}
  renderLists();paintVoice();paintButtons(st)}
@@ -436,11 +486,33 @@ function workdays(from){let a=new Date(from),b=new Date(),n=0;a.setHours(0,0,0,0
 function col(l){if(l.status==='needs_me')return 'b';const w=workdays(l.status==='waiting'&&l.last_chase_at?l.last_chase_at:l.asked_at);return w<2?'g':w<=4?'a':'r'}
 function isExt(l){if(!C)return false;const e=(l.owner_email||'').toLowerCase();return !!e&&!(C.internal_domains||[]).some(d=>e.endsWith('@'+d))}
 function willSend(l){return C&&(isExt(l)?!!C.send_external:!!C.send_internal)}
+const PRI={high:0,normal:1,low:2},pri=l=>PRI[l.priority]!==undefined?l.priority:'normal';
+// age for the colour blocks: how long the ball has been in someone's court (theirs: since asked or last chased; yours: since they replied)
+const ageRef=l=>l.status==='needs_me'?(l.last_reply_at||l.asked_at):(l.last_chase_at||l.asked_at);
+const ageCol=l=>{const w=workdays(ageRef(l));return w<2?'g':w<=4?'a':'r'};
+let SORT='date';try{SORT=localStorage.getItem('ol.sort')||'date'}catch(e){}
+function setSort(v){SORT=v;try{localStorage.setItem('ol.sort',v)}catch(e){}renderLists()}
+const byKey=(a,b)=>SORT==='priority'&&PRI[pri(a)]!==PRI[pri(b)]?PRI[pri(a)]-PRI[pri(b)]:a.asked_at<b.asked_at?-1:a.asked_at>b.asked_at?1:0;
+const PO_KEY='ol.person.open';let personOpen=new Set();try{personOpen=new Set(JSON.parse(localStorage.getItem(PO_KEY)||'[]'))}catch(e){}
+function togglePerson(key){personOpen.has(key)?personOpen.delete(key):personOpen.add(key);try{localStorage.setItem(PO_KEY,JSON.stringify([...personOpen]))}catch(e){}renderLists()}
+const personName=l=>l.owner||(l.channel==='vault'?'Your to-do file':'Notes to self');
+function groups(list){const m=new Map();for(const l of list){const k=personName(l);if(!m.has(k))m.set(k,[]);m.get(k).push(l)}return [...m.entries()]}   // list is sorted, so people follow their most pressing loop
+// one row per person: name | a block per loop, coloured by age | what it is about | count · oldest. Click: the cards.
+function personRow(sec,name,ls){const key=sec+':'+name,open=personOpen.has(key),hi=ls.some(l=>pri(l)==='high'),oldest=Math.max(...ls.map(l=>workdays(ageRef(l)))),k=esc(key);
+ const one=ls.length===1,shown=ls.length>4?3:ls.length;
+ const sum=one?`${esc(ls[0].ask)}${ls[0].theme?` <span class="pill">${esc(ls[0].theme)}</span>`:''}`
+  :ls.slice(0,shown).map(l=>`<div class="ln">${l.theme?`<b>${esc(l.theme)}</b> · `:''}${esc(l.ask)}</div>`).join('')+(ls.length>shown?`<div class="ln sub">+${ls.length-shown} more</div>`:'');
+ return `<div class="person${open?' open':''}" role="button" tabindex="0" aria-expanded="${open}" onclick="togglePerson('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePerson('${k}')}">
+  <div class="who">${esc(name)}${hi?'<span class="bang" title="high priority">!</span>':''}</div>
+  <div class="blocks">${ls.map(l=>`<span class="blk ${ageCol(l)}" title="${esc(l.ask.slice(0,80))} · ${workdays(ageRef(l))}wd"></span>`).join('')}</div>
+  <div class="sum">${sum}</div>
+  <div class="sub tail">${one?'':ls.length+' · '}${oldest}wd <span class="chev">▾</span></div></div>${open?`<div class="person-cards">${ls.map(l=>card(l)).join('')}</div>`:''}`}
+function priSel(l){const id=esc(l.id);return `<div class="sub" title="${l.priority_by==='you'?'you set this; the AI will not change it':'the AI\'s guess - change it and yours sticks'}">priority <select class="pri ${pri(l)}" onchange="act('${id}','priority',{priority:this.value})">${['high','normal','low'].map(v=>`<option value="${v}"${pri(l)===v?' selected':''}>${v}</option>`).join('')}</select> ${l.priority_by==='you'?'you':'AI'}</div>`}
 function card(l,dim){const w=workdays(l.asked_at);const sn=l.snooze_until&&l.snooze_until>TODAY;
  const vault=l.channel==='vault';
  const note=l.channel==='note'||(l.manual&&!vault);
  return `<div class="card ${dim||sn?'snoozed':''}"><div class="dot ${col(l)}"></div>
- <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)" title="a draft is waiting in Slack/Gmail - check it before drafting again">✎ chase drafted ${fmt(l.last_chase_at)}</b>`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
+ <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)" title="a draft is waiting in Slack/Gmail - check it before drafting again">✎ chase drafted ${fmt(l.last_chase_at)}</b>`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div>${l.status!=='done'?priSel(l):''}</div>
  <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'your to-do file')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${linkify(l.notes)}`:''}${(l.links||[]).length?`<br>${l.links.map(x=>`<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.url)}"><span>${esc(x.label||host(x.url))}</span><button type="button" aria-label="remove link" title="remove link" onclick="event.preventDefault();dropLink('${esc(l.id)}','${esc(x.url)}')">×</button></a>`).join('')}`:''}</div></div>
  <div class="acts" data-id="${esc(l.id)}">${(()=>{
    // Von Restorff: one primary per card - chase when waiting on them, done when it needs you; everything else quiet
@@ -455,19 +527,21 @@ function card(l,dim){const w=workdays(l.asked_at);const sn=l.snooze_until&&l.sno
    return chaseB+done+snoozeB+(more.length?`<details${openMore[l.id]?' open':''} ontoggle="openMore['${id}']=this.open"><summary>more ▾</summary><div>${more.join('')}</div></details>`:'')})()}</div></div>`}
 const openMore={};   // which cards have "more" open, so a re-render does not snap it shut under your cursor
 function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=='done'&&!(l.snooze_until&&l.snooze_until>TODAY);
- const needs=L.filter(l=>l.status==='needs_me'&&live(l)),wait=L.filter(l=>l.status==='waiting'&&live(l)).sort((a,b)=>a.asked_at<b.asked_at?-1:1),rest=L.filter(l=>!live(l));
- $('#needs').innerHTML=needs.map(l=>card(l)).join('')||'<div class="empty">nothing waiting on you</div>';
- $('#waiting').innerHTML=wait.map(l=>card(l)).join('')||'<div class="empty">nothing outstanding</div>';
+ const needs=L.filter(l=>l.status==='needs_me'&&live(l)).sort(byKey),wait=L.filter(l=>l.status==='waiting'&&live(l)).sort(byKey),rest=L.filter(l=>!live(l));
+ const sortBar=n=>n>1?`<div class="sortbar sub">sort ${[['date','oldest first'],['priority','priority']].map(([v,t])=>`<button class="quiet${SORT===v?' on':''}" onclick="setSort('${v}')">${t}</button>`).join('')}</div>`:'';
+ const gN=groups(needs),gW=groups(wait),ppl=g=>g.length===1?'1 person':g.length+' people';
+ $('#needs').innerHTML=needs.length?sortBar(needs.length)+gN.map(([n,ls])=>personRow('needs',n,ls)).join(''):'<div class="empty">nothing waiting on you</div>';
+ $('#waiting').innerHTML=wait.length?sortBar(wait.length)+gW.map(([n,ls])=>personRow('wait',n,ls)).join(''):'<div class="empty">nothing outstanding</div>';
  $('#rest').innerHTML=rest.map(l=>card(l,true)).join('');
- const by=wait.reduce((m,l)=>{m[col(l)]=(m[col(l)]||0)+1;return m},{});
- $('#n1').textContent=needs.length?`${needs.length} · they replied or you wrote a note, you owe a reply`:'nothing waiting on you';
- $('#n2').textContent=wait.length?`${wait.length} · `+[[by.g,'fresh'],[by.a,'amber'],[by.r,'red']].filter(x=>x[0]).map(x=>x.join(' ')).join(', '):'nothing outstanding';
+ const by=wait.reduce((m,l)=>{m[ageCol(l)]=(m[ageCol(l)]||0)+1;return m},{});
+ $('#n1').textContent=needs.length?`${needs.length} · ${ppl(gN)} · they replied or you wrote a note, you owe a reply`:'nothing waiting on you';
+ $('#n2').textContent=wait.length?`${wait.length} · ${ppl(gW)} · `+[[by.g,'fresh'],[by.a,'amber'],[by.r,'red']].filter(x=>x[0]).map(x=>x.join(' ')).join(', '):'nothing outstanding';
  $('#n3').textContent=rest.length?`${rest.length} · watched for 5 days in case they come back`:'none yet';paintPins();
  const dl=$('#need_people');if(dl)dl.innerHTML=Object.keys((C&&C.people)||{}).sort().map(n=>`<option value="${esc(n)}">`).join('')}
 const who=l=>l?((l.owner?l.owner+' — ':'')+(l.ask||'')).slice(0,60):'';
 // every card action: card dims at once (pending), then a toast says what happened; done/snooze/reopen offer Undo
 const UNDO={done:'reopen',reopen:'done',snooze:'unsnooze',unsnooze:'snooze',auto_off:'auto_on',auto_on:'auto_off'};
-const SAID={done:'Marked done',reopen:'Reopened',snooze:'Snoozed',unsnooze:'Unsnoozed',note:'Note saved',add_link:'Link added',drop_link:'Link removed',auto_off:'Auto-chase off for',auto_on:'Auto-chase on for'};
+const SAID={priority:'Priority set',done:'Marked done',reopen:'Reopened',snooze:'Snoozed',unsnooze:'Unsnoozed',note:'Note saved',add_link:'Link added',drop_link:'Link removed',auto_off:'Auto-chase off for',auto_on:'Auto-chase on for'};
 async function act(id,action,extra,quiet){const l=S&&S.loops.find(x=>x.id===id);const card=document.querySelector(`.acts[data-id="${CSS.escape(id)}"]`);if(card)card.closest('.card').classList.add('busy');
  try{await api('/api/action',Object.assign({id,action},extra||{}))}
  catch(e){if(card)card.closest('.card').classList.remove('busy');toast((SAID[action]||action)+' failed: '+e.message.replace(/^.*-> \d+ /,''),{err:true});throw e}
@@ -628,12 +702,21 @@ async function startOver(){if(!confirm('Wipe the list, people picks and learned 
 async function openClaude(){await api('/api/open-claude',{});$('#setup_msg').textContent=agentLabel()+' window opened — finish there, then come back. The ticks update by themselves.'}
 
 // ---------- doctor + the main loop ----------
-let docAt=0;
-async function doctor(force){$('#setup_msg').textContent=force?'checking…':'';DOC=await api('/api/doctor',{force:!!force,detect:true});docAt=Date.now();if(force){$('#setup_msg').textContent='';tick()}}
-let wasRunning=false,loopT=null,said={};
+let docAt=0,docFails=0,docT=null,docSaid='';
+async function doctor(force){for(const id of ['setup_msg','checkfail_msg'])$('#'+id).textContent=force?'checking…':'';
+ let r;try{r=await api('/api/doctor',{force:!!force,detect:true})}catch(e){r={all_ok:false,error:e.message,steps:[]}}
+ docAt=Date.now();
+ if(r.error){docFails++;clog(`connection check did not run (${docFails}x): `+r.error);
+  if(!DOC||DOC.error)DOC=r;                                   // nothing good to fall back on: the page says so, plainly
+  else if(docFails===1)toast("Couldn't re-check your connections just now. Trying again in a moment.",{ms:6000});   // otherwise the list stays; one quiet line
+  if(docFails<4){clearTimeout(docT);docT=setTimeout(()=>doctor(true).catch(()=>{}),15000)}}   // three quiet retries, then the normal once-a-minute rhythm
+ else{if(docFails)clog('connection check ran fine again');docFails=0;DOC=r;
+  const said=r.all_ok?'all ok':'needs attention: '+r.steps.filter(x=>!x.ok&&!x.optional).map(x=>x.id).join(', ');if(said!==docSaid){docSaid=said;clog('connection check: '+said)}}
+ if(force){for(const id of ['setup_msg','checkfail_msg'])$('#'+id).textContent='';tick()}}
+let wasRunning=false,loopT=null,said={},runSeen=new Set();
 // Peak-End: when a job ends, say what it did and what is next - never just let the spinner vanish
 function finished(){if(!J)return;for(const k of Object.keys(J)){const j=J[k];if(!j||j.running||j.rc===undefined||said[k]===j.log)continue;said[k]=j.log;
- const ok=j.rc===0,tail=(j.log||'').trim().split('\n').pop()||'';
+ const ok=j.rc===0,tail=(j.log||'').trim().split('\n').pop()||'';clog(`${k} finished rc=${j.rc}`+(tail?' · '+tail.slice(0,200):''));
  if(!ok&&j.rc===2){toast(`${k}: skipped - ${tail.replace(/^SKIPPED:?\s*/i,'')}`,{ms:6000});continue}
  if(!ok){toast(`${k} didn't finish - details under Settings → History → "Last job output"`,{err:true,ms:8000});continue}
  if(k==='refresh'){const a=counts(),b=before||a;const fresh=[...a.ids].filter(x=>!b.ids.has(x)).length;before=null;
@@ -646,10 +729,11 @@ function finished(){if(!J)return;for(const k of Object.keys(J)){const j=J[k];if(
 async function loop(){clearTimeout(loopT);try{
   await loadState();
   const now=Object.values(J).some(j=>j.running);
+  for(const k of Object.keys(J))if(J[k].running&&!runSeen.has(k))clog(k+' started');runSeen=new Set(Object.keys(J).filter(k=>J[k].running));
   if(wasRunning&&!now){await loadCfg();await loadDaylog();await loadRm();finished()}   // a job just finished: pick up new people/voice/config/day log/roadmap, say what happened
   wasRunning=now;
   const st=stage();
-  if((st==='connect'||st==='checking')&&Date.now()-docAt>60000)await doctor(false);
+  if((st==='connect'||st==='checking'||st==='checkfail')&&Date.now()-docAt>60000)await doctor(false);
   await tick();banner('');
  }catch(e){banner('Something went wrong talking to the app: '+e.message+' — if it keeps happening, close this tab and open Open Loops again.')}
  const st=stage();loopT=setTimeout(loop,(J&&Object.values(J).some(j=>j.running))||st!=='ready'?4000:60000)}
@@ -660,5 +744,6 @@ async function quitApp(){const b=$('#quitbtn');b.disabled=true;try{const r=await
   const after=r.after_jobs&&r.after_jobs.length?' once the running '+r.after_jobs.join(', ')+' job finishes':'';
   banner('Open Loops is stopping'+after+'. You can close this tab; double-click the Open Loops icon to start it again.')}catch(e){b.disabled=false;banner('Could not stop: '+e.message)}}
 cfgRestore();
+clog('page opened '+location.host+' · page '+PAGE);conPaint();
 (async()=>{try{await loadCfg();await loadState();await doctor(false);await loadDaylog();await loadRm()}catch(e){banner('Could not start: '+e.message)}loop()})();
 </script></body></html>

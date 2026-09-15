@@ -59,6 +59,22 @@ check(sam["links"][0]["label"] == "deck", "an existing link keeps its label")
 bo = next(l for l in s["loops"] if l["id"] == "bo-brief")
 check(bo["links"] == [{"url": "https://miro.com/app/board/x", "label": "board"}], "new loop keeps http links only")
 check(bo["status"] == "waiting" and bo["chases"] == 0 and bo["snooze_until"] is None, "new loop gets the default fields")
+check(bo["priority"] == "normal" and bo["priority_by"] == "ai" and bo["theme"] == "", "new loop without a judgement: normal priority, marked AI, no theme")
+
+# --- priority + theme: the agent judges, the person's own setting always stands
+s = base()
+s["loops"][1].update({"priority": "low", "priority_by": "you", "theme": "old theme"})   # Ana: set by hand
+pt = {"new_loops": [{"id": "di-plan", "owner": "Di", "ask": "plan", "channel": "slack", "thread": "DM Di", "priority": "high", "theme": "Q4 budget planning and more words"},
+                    {"id": "ed-x", "owner": "Ed", "ask": "x", "channel": "slack", "thread": "DM Ed", "priority": "urgent"}],
+      "updates": [{"id": "sam-deck", "status": "waiting", "priority": "high", "theme": "the deck"},
+                  {"id": "ana-invoice", "status": "waiting", "priority": "high", "theme": "new theme"}]}
+refresh.apply(s, pt, slack_only=True, now="2026-09-15T16:00+01:00")
+di = next(l for l in s["loops"] if l["id"] == "di-plan"); ed = next(l for l in s["loops"] if l["id"] == "ed-x")
+check(di["priority"] == "high" and di["priority_by"] == "ai" and di["theme"] == "Q4 budget planning and more words"[:40], "new loop keeps the agent's priority + theme (theme capped at 40)")
+check(ed["priority"] == "normal", "an unknown priority word falls back to normal")
+sam = next(l for l in s["loops"] if l["id"] == "sam-deck"); ana = next(l for l in s["loops"] if l["id"] == "ana-invoice")
+check(sam["priority"] == "high" and sam["priority_by"] == "ai" and sam["theme"] == "the deck", "an update sets priority + theme on a loop that had neither")
+check(ana["priority"] == "low" and ana["priority_by"] == "you" and ana["theme"] == "old theme", "an update never overrides a priority or theme the person set")
 
 # --- full run
 s = base()

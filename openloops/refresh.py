@@ -59,7 +59,12 @@ been actioned.{slack_note} Today is {today}.
           inbound loops (marked "inbound"): once {name} has replied -> "done", unless that reply
           asks them for something new -> "waiting".
           nothing new -> leave unchanged (omit from updates).
-3. LINKS. If a thread mentions a document URL (Google Drive/Docs/Sheets, Miro, Notion, Figma, a
+3. PRIORITY + THEME. For every new loop give "priority": "high" (blocks {name} or a deadline this week,
+   senior asker, money or a customer), "normal", or "low" (nice-to-have, no date), and "theme": 2-4 words
+   naming what it is about (e.g. "Q4 budget", "contract redlines", "hiring: designer"). Existing loops listed
+   without a theme get one in their update; only change an existing priority if the thread makes it clearly
+   more or less urgent (loops marked "priority_by": "you" were set by {name}: never change those).
+4. LINKS. If a thread mentions a document URL (Google Drive/Docs/Sheets, Miro, Notion, Figma, a
    ticket), include it in that loop's "links" with a 2-4 word label. New loops and updates both take
    a "links" array; omit it when there is nothing.
 
@@ -71,14 +76,19 @@ Reply with ONLY a JSON object between the markers, nothing else:
                   "ask": "one line", "channel": "slack|email", "thread": "DM <name> <channel id> | #channel | email subject",
                   "link": "slack://channel?team=&id=<id> or gmail search url", "asked_at": "ISO datetime",
                   "status": "waiting, or needs_me for inbound", "inbound": false, "notes": "",
+                  "priority": "high|normal|low", "theme": "2-4 words",
                   "links": [{{"url": "https://...", "label": "short label"}}]}}],
   "updates": [{{"id": "<existing id>", "status": "waiting|needs_me|done", "last_reply_at": "ISO or null",
                 "reply_snippet": "<=120 chars", "asked_at": "ISO (only if a new ask by {name})",
+                "priority": "high|normal|low (only if it changed)", "theme": "2-4 words (only if missing)",
                 "links": [{{"url": "https://...", "label": "short label"}}]}}],
   "gmail_available": true
 }}
 <<<END>>>
 """
+
+
+PRIORITIES = ("high", "normal", "low")
 
 
 def from_mail(l):
@@ -124,7 +134,7 @@ def build_prompt(s, slack_only, slack_on):
         thread_howto=("Slack: read the DM/channel with the id in `thread`" if slack_only else
                       "Slack: read the DM/channel with the id in `thread`; Gmail: search the subject in `thread`"),
         today=datetime.now().strftime("%Y-%m-%d %H:%M"),
-        loops=json.dumps([{k: l[k] for k in ("id", "owner", "ask", "channel", "thread", "asked_at", "status", "closed_at") if k in l} for l in open_loops], indent=1, ensure_ascii=False),
+        loops=json.dumps([{k: l[k] for k in ("id", "owner", "ask", "channel", "thread", "asked_at", "status", "closed_at", "priority", "priority_by", "theme") if k in l} for l in open_loops], indent=1, ensure_ascii=False),
         # headline cursor: the older of the two in a full run, or email asks made since the last
         # slack-only pass would look "too old" to the model
         since=slack_since if slack_only else s["cursor"],
@@ -161,6 +171,9 @@ def apply(s, out, slack_only, now):
             continue  # belt and braces: the prompt says no email, the merge enforces it
         links = nl.pop("links", None)
         nl.setdefault("status", "waiting")
+        nl["priority"] = nl.get("priority") if nl.get("priority") in PRIORITIES else "normal"
+        nl["priority_by"] = "ai"
+        nl["theme"] = str(nl.get("theme") or "")[:40]
         nl.update({"last_reply_at": None, "reply_snippet": None, "chases": 0, "snooze_until": None})
         merge_links(nl, links)
         s["loops"].append(nl)
@@ -173,6 +186,10 @@ def apply(s, out, slack_only, now):
         for k in ("status", "last_reply_at", "reply_snippet", "asked_at"):
             if u.get(k):
                 l[k] = u[k]
+        if u.get("theme") and not l.get("theme"):
+            l["theme"] = str(u["theme"])[:40]
+        if u.get("priority") in PRIORITIES and l.get("priority_by") != "you":  # the person's call always stands
+            l["priority"], l["priority_by"] = u["priority"], "ai"
         merge_links(l, u.get("links"))
         if l["status"] == "needs_me":
             l["snooze_until"] = None
