@@ -58,7 +58,7 @@ if ((Resolve-Path $Src).Path -eq $Dest) { Say "Already installed here - updating
 Say "Installing Open Loops to $Dest ..."
 New-Item -ItemType Directory -Force $Dest | Out-Null
 if ((Resolve-Path $Src).Path -ne $Dest) {
-    Get-ChildItem $Src -Exclude "state","voice.json","state.json","config.json","people_suggested.json",".git" | Copy-Item -Destination $Dest -Recurse -Force
+    Get-ChildItem $Src -Exclude "state","voice.json","state.json","config.json","people_suggested.json",".git","docs","tests",".worktrees" | Copy-Item -Destination $Dest -Recurse -Force
 }
 New-Item -ItemType Directory -Force (Join-Path $Dest "state\logs") | Out-Null
 

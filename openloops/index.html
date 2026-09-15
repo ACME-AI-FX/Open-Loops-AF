@@ -7,8 +7,33 @@
 header{display:flex;align-items:center;gap:14px;padding:12px 24px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:2}
 h1{font-size:18px;margin:0 6px 0 0}header .meta{color:var(--mut);font-size:12px;margin-left:auto}
 .tabs{display:flex;gap:2px}.tabs button{border:none;background:none;padding:6px 12px;border-radius:6px;color:var(--mut)}.tabs button.on{background:var(--bg);color:var(--ink);font-weight:600}
-button{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
-button.primary{background:var(--b);color:#fff;border-color:var(--b)}button:disabled{opacity:.5;cursor:not-allowed}
+/* Fitts: every control is at least 36px tall; keyboard users always see where focus is */
+button{font:inherit;padding:6px 12px;min-height:36px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--b);color:#fff;border-color:var(--b)}button.accent{border-color:var(--b);color:var(--b)}button:disabled{opacity:.5;cursor:wait}
+button.quiet{border-color:transparent;color:var(--mut)}button.quiet:hover{border-color:var(--line);color:var(--ink)}
+:focus-visible{outline:2px solid var(--b);outline-offset:2px}
+input,select,textarea{min-height:36px}textarea{min-height:0}
+.chip{display:inline-flex;align-items:center;font-size:11px;padding:0 0 0 8px;border-radius:10px;border:1px solid var(--line);color:var(--b);text-decoration:none;margin:3px 4px 0 0;max-width:260px;overflow:hidden;white-space:nowrap;vertical-align:bottom}.chip span{overflow:hidden;text-overflow:ellipsis}
+.chip button{min-height:0;height:22px;width:26px;padding:0;border:0;background:none;color:var(--mut);font-size:14px;line-height:1}.chip button:hover{color:var(--r)}
+/* toasts: every action is acknowledged, undo where it is cheap */
+#toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:30;max-width:min(560px,calc(100vw - 32px))}
+.toast{background:var(--ink);color:var(--bg);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.toast.err{background:#7f1d1d;color:#fff}.toast button{min-height:28px;padding:2px 10px;background:transparent;color:inherit;border-color:currentColor;font-size:12px}
+/* one dialog for every "type something" moment: snooze, note, link, closing a vault item */
+dialog{border:1px solid var(--line);border-radius:10px;padding:0;background:var(--card);color:var(--ink);max-width:min(560px,calc(100vw - 32px));width:100%}
+dialog::backdrop{background:rgba(0,0,0,.45)}dialog .box{margin:0;border:0}dialog label{display:block;margin-top:10px;font-size:12px;color:var(--mut)}
+dialog input,dialog textarea{width:100%;margin-top:4px}dialog .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.card.busy{opacity:.5;pointer-events:none}
+/* radio/checkbox labels are real targets too (people picks, settings toggles) */
+label:has(>input[type=radio]),label:has(>input[type=checkbox]){display:inline-flex;align-items:center;gap:6px;min-height:36px;padding:0 6px;border-radius:6px;cursor:pointer}
+label:has(>input:checked){background:var(--bg)}
+@media(max-width:720px){.card{grid-template-columns:10px 1fr}.card>.acts{grid-column:1/-1;justify-content:flex-start}}
+.rmrow{display:grid;grid-template-columns:1.3fr 1fr 110px 130px 130px 112px 40px;gap:6px;padding:5px 0;border-top:1px solid var(--line);align-items:start}
+.rmrow input,.rmrow select,#rm_paste{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);width:100%}
+.rmrow.rmhead{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;border-top:0}
+.rmrow button{padding:0;width:36px;font-size:14px;color:var(--mut)}
+pre.out{white-space:pre-wrap;font:13px/1.55 system-ui,Segoe UI,sans-serif;margin:8px 0 0;max-height:360px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px}
+details.sect{margin-top:16px}details.sect>summary{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);cursor:pointer}details.sect>summary span{letter-spacing:0;text-transform:none}
 main{max-width:1100px;margin:0 auto;padding:20px 24px}
 h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:22px 0 8px}
 h3{margin:4px 0 6px;font-size:14px}
@@ -16,7 +41,9 @@ h3{margin:4px 0 6px;font-size:14px}
 .box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:12px}
 .dot{width:10px;height:10px;border-radius:50%;margin-top:5px}.g{background:var(--g)}.a{background:var(--a)}.r{background:var(--r)}.b{background:var(--b)}
 .who{font-weight:600}.sub{color:var(--mut);font-size:12px;margin-top:3px}.sub a{color:var(--b);text-decoration:none}
-.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.acts button{padding:4px 9px;font-size:12px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.acts button{padding:4px 10px;font-size:12px;white-space:nowrap}
+.acts details{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.acts details>summary{list-style:none;display:inline-flex;align-items:center;min-height:36px;padding:0 8px;font-size:12px;color:var(--mut);cursor:pointer;border-radius:6px}.acts details>summary::-webkit-details-marker{display:none}.acts details[open]>summary{color:var(--ink)}
+.acts details>div{display:inline-flex;gap:6px;flex-wrap:wrap}
 .snoozed{opacity:.55}.empty{color:var(--mut);padding:10px 0}
 pre.log{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;color:var(--mut)}
 .pill{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--mut)}
@@ -26,12 +53,12 @@ details summary{cursor:pointer;color:var(--mut);font-size:12px}
 .steps span.done{border-color:var(--g);color:var(--g)}.steps span.now{background:var(--b);border-color:var(--b);color:#fff}
 input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--b);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}
-#close_modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;padding:24px}
-#close_modal.on{display:block}
+#savebar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);margin:8px -24px 0;padding:10px 24px;display:flex;gap:10px;align-items:center;z-index:2}
 </style></head><body>
 <header><h1>Open Loops</h1>
 <div class="tabs"><button id="tab_home" class="on" onclick="showTab('home')">Home</button><button id="tab_settings" onclick="showTab('settings')">⚙ Settings</button></div>
 <button class="primary" id="refresh" onclick="refresh()" title="">Refresh</button>
+<button id="uslack" onclick="refresh(true)" title="quick pass: Slack only, skips email" style="display:none">Update Slack</button>
 <span class="pill" id="gmail"></span>
 <span class="meta" id="meta"></span></header>
 <main>
@@ -70,6 +97,16 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
  <div id="st_auto" class="box" style="display:none"><h3 id="auto_title"></h3><div class="sub" id="auto_sub"></div><div style="margin-top:10px"><button id="auto_retry" onclick="retryStage()" style="display:none">Try again</button></div></div>
 
  <div id="lists">
+  <!-- Pinned: the boards and docs you open every day, yours rather than a loop's. Miro boards can open in a view-only embed here. -->
+  <div id="pins_wrap" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 4px">
+   <span class="sub" style="letter-spacing:.08em;text-transform:uppercase;font-size:11px;margin-right:4px">Pinned</span>
+   <span id="pins"></span>
+   <button class="quiet" onclick="pinAdd()" title="pin a board or document you open often">+ pin</button>
+  </div>
+  <div id="pin_embed_wrap" style="display:none;margin:0 0 14px">
+   <div class="sub" style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span id="pin_embed_title"></span><a id="pin_embed_open" href="#" target="_blank" rel="noopener">open in Miro</a><button class="quiet" onclick="pinEmbed(null)">close</button></div>
+   <iframe id="pin_embed" style="width:100%;height:520px;border:1px solid var(--line);border-radius:6px;background:var(--bg)" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>
   <h2>Needs me <span id="n1"></span></h2>
   <div class="box" id="add_need" style="padding:10px 12px">
    <div class="sub" style="margin-bottom:8px">Add something you need to do for someone. It stays here until you mark it done — Refresh does not close these.</div>
@@ -85,27 +122,63 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <h2>Waiting on them <span id="n2"></span></h2><div id="waiting"></div>
   <details><summary>Snoozed / done</summary><div id="rest"></div></details>
  </div>
+ <details class="sect" id="dl_wrap"><summary>Day log <span class="sub" id="dl_meta"></span></summary>
+  <div class="box" style="margin-top:8px">
+   <div class="sub" id="dl_digest"></div>
+   <div style="margin:8px 0 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button id="dl_run" onclick="writeDaylog()">Write it up</button>
+    <button id="dl_copy" onclick="copyDaylog()" style="display:none">Copy</button>
+    <a id="dl_open" href="/api/daylog/page" target="_blank" class="sub" style="display:none">open the page</a>
+    <span class="sub" id="dl_msg"></span>
+   </div>
+   <pre id="dl_text" class="out" style="display:none"></pre>
+  </div>
+ </details>
+ <details class="sect" id="rm_wrap"><summary>Roadmap <span class="sub" id="rm_head"></span></summary>
+  <div class="box" id="roadmap" style="margin-top:8px;display:none">
+   <div class="sub" id="rm_board"></div>
+   <div class="sub" style="margin:8px 0 4px">Paste your standup notes — one thought per line is plenty. Reading them fills in the lane, column, owner and state; fix anything it got wrong before it goes near the board.</div>
+   <textarea id="rm_paste" rows="4" placeholder="e.g. Rafe still on the layout tool fixes&#10;Alara to scope the multi-plate ticket this week" oninput="rmTouch()"></textarea>
+   <div style="margin:8px 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+    <button class="primary" id="rm_parsebtn" onclick="rmParse()">Read these notes</button>
+    <button onclick="rmAddRow()">+ row by hand</button>
+    <button id="rm_readbtn" onclick="rmRead()">Read board</button>
+    <span class="sub" id="rm_msg"></span>
+   </div>
+   <div id="rm_rows"></div>
+   <div style="margin-top:12px;padding:10px;border:1px solid var(--line);border-radius:6px">
+    <b style="font-size:12px">Send it to the board</b>
+    <div class="sub" style="margin:4px 0 8px">Preview shows what would be added. Posting <b>adds</b> cards and deletes nothing: a row already on the board is reported and left alone.</div>
+    <div style="display:flex;gap:6px;align-items:center;flex-wrap:wrap">
+     <button id="rm_prevbtn" onclick="rmPreview()">Preview</button>
+     <button id="rm_postbtn" onclick="rmPost()" disabled>Add to the roadmap</button>
+     <span class="sub" id="rm_armmsg"></span>
+    </div>
+    <div id="rm_preview" class="sub" style="margin-top:8px"></div>
+   </div>
+   <details id="rm_embed_wrap" style="margin-top:10px;display:none" ontoggle="rmEmbed()"><summary>Board (live, view only)</summary>
+    <iframe id="rm_embed" style="width:100%;height:520px;border:1px solid var(--line);border-radius:6px;margin-top:8px;background:var(--bg)" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer-when-downgrade"></iframe>
+   </details>
+  </div>
+ </details>
  <details style="margin-top:14px"><summary>Last job output</summary><pre id="log" class="log"></pre></details>
 </div>
-<div id="close_modal">
- <div class="box" style="max-width:560px;margin:12vh auto">
-  <h3 id="close_title">How are you closing this?</h3>
-  <div class="sub" id="close_sub" style="margin-bottom:8px"></div>
-  <textarea id="close_text" rows="5" style="width:100%" placeholder="What did you do? Name any other standing items this changes (A7, A8…)." oninput="$('#close_ok').disabled=!this.value.trim()"></textarea>
-  <div style="margin-top:10px;display:flex;gap:8px">
-   <button class="primary" id="close_ok" disabled onclick="submitClose()">Mark done</button>
-   <button onclick="hideClose()">Cancel</button>
+<!-- one dialog for snooze / note / link / closing a vault item: same look, Esc cancels, Enter submits, input kept on error -->
+<dialog id="dlg"><form method="dialog" class="box" style="padding:16px 18px" onsubmit="return dlgSubmit(event)">
+  <h3 id="dlg_title"></h3>
+  <div class="sub" id="dlg_sub"></div>
+  <div id="dlg_fields"></div>
+  <div class="sub" id="dlg_err" style="color:var(--r);margin-top:6px"></div>
+  <div style="margin-top:14px;display:flex;gap:8px">
+   <button class="primary" id="dlg_ok" type="submit">OK</button>
+   <button type="button" onclick="dlgClose()">Cancel</button>
   </div>
- </div>
-</div>
+</form></dialog>
+<div id="toasts" aria-live="polite"></div>
 
 <!-- ================= SETTINGS ================= -->
-<div id="page_settings" style="display:none">
- <div class="box">
-  <h3>ClaudeCloud vault</h3>
-  <div class="sub">Folder with <code>02-Research/standing-items.md</code>. Blank = <code>~/ClaudeCloud</code>. Open Loops re-reads that file every time the page refreshes (about once a minute) — it does not watch GitHub. New or rewritten lines show a <b>new</b> / <b>updated</b> mark for the rest of the day. Done asks how you closed them and writes that into the vault.</div>
-  <input id="cfg_vault" style="margin:6px 0 0;width:100%" placeholder="/Users/you/ClaudeCloud">
- </div>
+<div id="page_settings" style="display:none" oninput="cfgDirty()" onchange="cfgDirty()">
+ <h2 style="margin-top:0">You</h2>
  <div class="box">
   <h3>Your name</h3>
   <div class="sub">First name, as you'd sign a message.</div>
@@ -114,24 +187,30 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
  <div class="box">
   <h3>Your AI</h3>
   <div class="sub">Which AI assistant reads your messages and writes the nudges. It must be installed and signed in on this computer — after switching, the Home tab re-checks the connections.</div>
-  <select id="cfg_agent" style="margin:6px 0 0;font:inherit;padding:4px" onchange="if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=this.value==='grok'?'':'none'"><option value="claude">Claude (Claude Code)</option><option value="grok">Grok (Grok CLI)</option></select>
+  <select id="cfg_agent" style="margin:6px 0 0;font:inherit;padding:4px" onchange="if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=this.value==='grok'?'':'none';$('#cfg_model_wrap').style.display=this.value==='claude'?'':'none'"><option value="claude">Claude (Claude Code)</option><option value="grok">Grok (Grok CLI)</option></select>
+  <div id="cfg_model_wrap" style="margin-top:10px">
+   <label>Model <select id="cfg_model" style="font:inherit;padding:4px"><option value="sonnet">Sonnet (recommended)</option><option value="haiku">Haiku (cheapest)</option><option value="opus">Opus</option><option value="">Claude Code's default</option></select></label>
+   <label style="margin-left:12px">Effort <select id="cfg_effort" style="font:inherit;padding:4px"><option value="xhigh">xhigh (recommended with Sonnet)</option><option value="max">max</option><option value="high">high</option><option value="medium">medium (recommended with Opus)</option><option value="low">low</option><option value="">Claude Code's default</option></select></label>
+   <div class="sub">Claude only. Which Claude model the scans, refreshes and chase drafts run on, and how hard it thinks per turn. Sonnet at xhigh or Opus at medium both do the job; Sonnet is the cheaper of the two. "Claude Code's default" uses whatever <code>claude</code> is set to on this computer, which is often the most expensive model.</div>
+  </div>
+  <div class="sub" id="cfg_slack_src" style="margin-top:6px"></div>
   <div id="cfg_slack_wrap" style="margin-top:10px">
    <label><input type="checkbox" id="cfg_use_slack"> Use Slack</label>
    <div class="sub">Grok only. Off (default) = Gmail-only; Slack is not started or checked. On = load Grok's Slack plugin and show it on the connection checklist — then Open Grok → <code>/mcps</code> → Slack → <b>i</b>.</div>
   </div>
  </div>
  <div class="box">
+  <h3>Your voice</h3>
+  <div class="sub">Reads how you actually write to each person (your own Slack DMs + sent email, read-only) and stores a per-person style note with real examples, so chases sound like you. Runs automatically after Who's who; re-run whenever you change people.</div>
+  <div style="margin:8px 0"><button id="voicebtn" onclick="learnVoice()">Learn my tone</button> <span class="sub" id="voice_meta"></span></div>
+  <div id="voice"></div>
+ </div>
+ <div class="box">
   <h3>History</h3>
   <div class="sub">How far back the AI reads when building context — the "who's who" people scan (both people you write to and real people who write to you), and the very first loop scan. Longer = fuller picture, slower scans. To re-scan with a new window: press "Pick from who I message most" below, or Start over for a full rebuild.</div>
   <select id="cfg_history" style="margin:6px 0 0;font:inherit;padding:4px"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="60">Last 60 days</option><option value="90">Last 90 days</option><option value="180">Last 180 days</option></select>
  </div>
- <div class="box">
-  <h3>Daily refresh time</h3>
-  <div class="sub">Weekdays, only while you're logged in. Runs the refresh, then the timer (if enabled). Pick something before you'd normally open the page.</div>
-  <div style="margin:6px 0 0;display:flex;gap:8px;align-items:center">
-   <input id="cfg_time" type="time" style="font:inherit;padding:4px"> <button onclick="saveTime()">Apply</button> <span class="sub" id="time_msg"></span>
-  </div>
- </div>
+ <h2>Chasing</h2>
  <div class="box">
   <h3>Chasing</h3>
   <label><input type="checkbox" id="cfg_ext"> Chase <b>external</b> email contacts too (vendors, lawyers). Off = internal people only.</label>
@@ -169,19 +248,46 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <input id="cfg_excl_people" style="width:100%;margin-top:6px" placeholder="people">
   <input id="cfg_excl_topics" style="width:100%;margin-top:6px" placeholder="topics">
  </div>
- <div style="margin:4px 0 16px;display:flex;gap:8px;align-items:center">
-  <button class="primary" onclick="saveCfg()">Save settings</button><span class="sub" id="cfg_msg"></span>
+ <h2>Connections</h2>
+ <div class="box">
+  <h3>Daily refresh time</h3>
+  <div class="sub">Weekdays, only while you're logged in. Runs the refresh, then the timer (if enabled). Pick something before you'd normally open the page. Applies on its own; no need to press Save.</div>
+  <div style="margin:6px 0 0;display:flex;gap:8px;align-items:center">
+   <input id="cfg_time" type="time" style="font:inherit;padding:4px"> <button onclick="saveTime()">Apply</button> <span class="sub" id="time_msg"></span>
+  </div>
  </div>
  <div class="box">
-  <h3>Start over</h3>
-  <div class="sub">Wipes the list, the people picks and the learned tone, and takes you back to step 1 as a brand-new user would see it. Keeps your name, domains and tone settings. Slack/Gmail stay connected.</div>
-  <div style="margin-top:8px"><button onclick="startOver()">Start over</button></div>
+  <h3>Your own to-do file (optional)</h3>
+  <div class="sub">A markdown file you already keep, anywhere on this computer (a notes vault, a synced folder, a git repo). Its open lines show under <b>Needs me</b>; pressing <b>done</b> asks how you closed the item and writes that back into the file. Re-read about once a minute. Leave blank if you don't keep one.</div>
+  <input id="cfg_standing" style="margin:6px 0 0;width:100%" oninput="clearTimeout(window.stT);window.stT=setTimeout(standingStatus,400)" placeholder="C:\Users\you\Notes\standing-items.md   (a folder also works: <folder>\02-Research\standing-items.md)">
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="sub" id="standing_status"></span><button id="standing_create" type="button" style="display:none" onclick="standingCreate()">Create a starter file there</button></div>
+  <details style="margin-top:8px"><summary>The format, and what else gets logged</summary>
+   <div class="sub" style="margin-top:6px">One item per line, ids A1, A2… Snooze an item by adding <code>| snoozed-until YYYY-MM-DD</code>. Tick it here or in Open Loops.</div>
+   <pre class="out" style="margin-top:6px">- [ ] A1 | project | what to do | added 2026-09-15
+- [ ] A2 | Client X | send the revised quote | added 2026-09-15 | snoozed-until 2026-09-22
+- [x] A3 | project | done item | added 2026-09-01 | done 2026-09-14</pre>
+   <div class="sub" style="margin-top:6px">When you press done, the line moves under <b>## Closed</b> and your note is appended under <b>## Closure notes</b> as <code>- A1 | date | note</code>. Other things Open Loops writes: <code>state/daylog/&lt;date&gt;.json</code> + <code>.html</code> (each Day log), <code>state/logs/</code> (one log per job run), <code>state/roadmap.json</code> and <code>state/roadmap-created.txt</code> (Miro cards it added). Nothing else on disk is touched.</div>
+  </details>
  </div>
  <div class="box">
-  <h3>Your voice</h3>
-  <div class="sub">Reads how you actually write to each person (your own Slack DMs + sent email, read-only) and stores a per-person style note with real examples, so chases sound like you. Runs automatically after Who's who; re-run whenever you change people.</div>
-  <div style="margin:8px 0"><button id="voicebtn" onclick="learnVoice()">Learn my tone</button> <span class="sub" id="voice_meta"></span></div>
-  <div id="voice"></div>
+  <h3>Roadmap (Miro)</h3>
+  <div class="sub">The Roadmap section on Home adds cards to a frame on a Miro board. Board = its name or link; frame = the title of the roadmap frame on it. Needs Miro connected in Claude — the connection checklist on Home says how.</div>
+  <input id="cfg_rm_board" style="margin:6px 0 0;width:100%" placeholder="board name or https://miro.com/app/board/…">
+  <input id="cfg_rm_frame" style="margin:6px 0 0;width:100%" placeholder="frame title, e.g. Roadmap Sep 2026">
+ </div>
+ <h2>App</h2>
+ <div class="box">
+  <h3>Quit</h3>
+  <div class="sub">Closing this tab stops the app by itself a few seconds later (after any running job). This button does the same without closing the tab. To start again, double-click the Open Loops icon.</div>
+  <button id="quitbtn" onclick="quitApp()" style="margin-top:6px">Quit Open Loops</button>
+ </div>
+ <div class="box" style="border-color:var(--r)">
+  <h3 style="color:var(--r)">Start over</h3>
+  <div class="sub">Wipes the list, the people picks and the learned tone, and takes you back to step 1 as a brand-new user would see it. Keeps your name, domains and tone settings. Slack/Gmail stay connected. This cannot be undone.</div>
+  <div style="margin-top:8px"><button onclick="startOver()" style="border-color:var(--r);color:var(--r)">Start over…</button></div>
+ </div>
+ <div id="savebar">
+  <button class="primary" id="cfg_save" onclick="saveCfg()">Save settings</button><span class="sub" id="cfg_msg"></span>
  </div>
 </div>
 </main>
@@ -190,13 +296,33 @@ const $=s=>document.querySelector(s);
 let S=null,J=null,TODAY=null,C=null,V=null,P=null,DOC=null;
 const fmt=d=>d?new Date(d).toLocaleString('en-GB',{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'}):'';
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
+const host=u=>{try{return new URL(u).host.replace(/^www\./,'')}catch(e){return u}};
+// escape first, then make bare URLs clickable - notes are free text typed by you or written by the agent
+const linkify=s=>esc(s).replace(/https?:\/\/[^\s<]+/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u.length>48?host(u)+'/…':u}</a>`);
+// Every request carries this page's id; closing the tab sends a goodbye and the app quits a few seconds later (see app.py).
+const PAGE=Math.random().toString(36).slice(2)+Date.now().toString(36);let stopped=false;
+const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json','X-OL-Page':PAGE},body:JSON.stringify(b)}:{headers:{'X-OL-Page':PAGE}});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
 function banner(msg){const b=$('#banner');if(!msg){b.style.display='none';return}b.style.display='';b.textContent=msg}
+// ---------- feedback: a toast for every action (Doherty), with Undo where it is cheap (Postel) ----------
+function toast(msg,opt){opt=opt||{};const t=document.createElement('div');t.className='toast'+(opt.err?' err':'');t.textContent=msg;
+ if(opt.undo){const b=document.createElement('button');b.textContent=opt.undoLabel||'Undo';b.onclick=async()=>{t.remove();try{await opt.undo()}catch(e){toast('Undo failed: '+e.message,{err:true})}};t.appendChild(b)}
+ $('#toasts').appendChild(t);setTimeout(()=>t.remove(),opt.ms||(opt.undo?8000:4000));return t}
+// ---------- one dialog for snooze / note / link / vault close ----------
+let dlgOk=null;
+function dlgOpen(o){$('#dlg_title').textContent=o.title||'';$('#dlg_sub').textContent=o.sub||'';$('#dlg_err').textContent='';$('#dlg_ok').textContent=o.ok||'OK';$('#dlg_ok').disabled=false;
+ $('#dlg_fields').innerHTML=(o.fields||[]).map(f=>`<label>${esc(f.label||'')}${f.type==='textarea'?`<textarea id="dlg_${f.id}" rows="${f.rows||4}" placeholder="${esc(f.placeholder||'')}">${esc(f.value||'')}</textarea>`:`<input id="dlg_${f.id}" type="${f.type||'text'}" value="${esc(f.value||'')}" placeholder="${esc(f.placeholder||'')}" autocomplete="off">`}</label>`).join('')+(o.html||'');
+ dlgOk=o.onOk;$('#dlg').showModal();const first=$('#dlg_fields').querySelector('input,textarea');if(first)first.focus()}
+function dlgClose(){dlgOk=null;$('#dlg').close()}
+function dlgVal(id){const e=$('#dlg_'+id);return e?e.value.trim():''}
+async function dlgSubmit(ev){ev.preventDefault();if(!dlgOk)return false;const b=$('#dlg_ok');b.disabled=true;$('#dlg_err').textContent='';
+ try{const r=await dlgOk();if(r!==false)dlgClose()}catch(e){$('#dlg_err').textContent=e.message.replace(/^.*-> \d+ /,'')}b.disabled=false;return false}
+// Enter in a single-line dialog field submits; textarea keeps Enter for new lines
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.closest('#dlg')){e.preventDefault();$('#dlg_ok').click()}});
 
 // ---------- tabs ----------
 let formPainted=false;
 function showTab(t){$('#page_home').style.display=t==='home'?'':'none';$('#page_settings').style.display=t==='settings'?'':'none';
- $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');$('#refresh').style.display=t==='home'?'':'none';
+ $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');if(S&&DOC)paintButtons(stage());else{$('#refresh').style.display='none';$('#uslack').style.display='none'}
  if(t==='settings'&&!formPainted)paintForm()}
 
 // ---------- data ----------
@@ -218,12 +344,16 @@ const haveVoice=()=>!!(V&&V.people&&Object.keys(V.people).length);
 // ---------- the stage machine: derived from facts on disk every tick, never from what fired earlier ----------
 function stage(){if(!DOC)return 'checking';if(!DOC.all_ok)return 'connect';if(!havePeople())return 'people';if(!haveVoice())return 'voice';if(!S.last_refresh)return 'scan';return 'ready'}
 const kicked={};   // which automatic jobs this page load has already started (so a failure shows instead of looping)
+let lastStage=null;
 const ORDER=[['connect','Connect'],['people',"Who's who"],['voice','Learn tone'],['scan','First scan'],['ready','Ready']];
 async function tick(){
  const st=stage();
- $('#steps').innerHTML=st==='ready'?'':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===st)>i?'done':k===st?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===st)>i?' ✓':''}</span>`).join('');
+ $('#steps').innerHTML=st==='ready'?'':st==='checking'?'<span class="sub"><span class="spin"></span>Checking your connections…</span>':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===st)>i?'done':k===st?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===st)>i?' ✓':''}</span>`).join('');
  for(const k of ['connect','people','auto'])$('#st_'+k).style.display='none';
- $('#lists').style.display=st==='ready'?'':'none';
+ // Hick / Prägnanz: while setting up, the page is the setup - the lists, Day log and Roadmap wait until "ready"
+ $('#lists').style.display=st==='ready'?'':'none';$('#dl_wrap').style.display=st==='ready'?'':'none';$('#rm_wrap').style.display=st==='ready'?'':'none';
+ if(lastStage&&lastStage!=='ready'&&lastStage!=='checking'&&st==='ready')toast(`All set. Open Loops now refreshes itself every weekday morning at ${(C&&C.refresh_time)||'09:15'}; press Refresh any time for a fresh pass.`,{ms:10000});
+ lastStage=st;
  if(st==='connect')paintConnect();
  else if(st==='people'){$('#st_people').style.display='';await stagePeople()}
  else if(st==='voice'||st==='scan'){$('#st_auto').style.display='';await stageAuto(st)}
@@ -258,18 +388,22 @@ async function stageAuto(st){const t=$('#auto_title'),s=$('#auto_sub'),r=$('#aut
  if(st==='voice'){
   if(!running('voice')&&!kicked.voice){kicked.voice=true;await api('/api/voice',{});J.voice={running:true}}
   if(running('voice')){t.innerHTML='<span class="spin"></span>3 · Learning how you write…';s.textContent='Reading your own messages to the people you just picked, so chases sound like you. About a minute.'}
-  else{t.textContent='3 · Learning your tone didn\'t finish';s.textContent='Details under "Last job output" below.';r.style.display=''}}
+  else{t.textContent='3 · Learning your tone didn\'t finish';s.innerHTML='Press <b>Try again</b>. If it fails again, the last lines of the log are:<pre class="log" style="margin-top:6px">'+esc(((J.voice||{}).log||'').trim().slice(-400)||'(no output)')+'</pre>';r.style.display=''}}
  else{
   if(!running('refresh')&&!kicked.scan){kicked.scan=true;await api('/api/refresh',{});J.refresh={running:true}}
   if(running('refresh')){t.innerHTML='<span class="spin"></span>4 · First scan of your Slack and email…';s.textContent='Looking for things you\'ve asked people for in the last week. Two or three minutes.'}
-  else{t.textContent='4 · The first scan didn\'t finish';s.textContent='Details under "Last job output" below.';r.style.display=''}}}
+  else{t.textContent='4 · The first scan didn\'t finish';s.innerHTML='Press <b>Try again</b>. If it fails again, the last lines of the log are:<pre class="log" style="margin-top:6px">'+esc(((J.refresh||{}).log||'').trim().slice(-400)||'(no output)')+'</pre>';r.style.display=''}}}
 function retryStage(){const st=stage();kicked[st==='voice'?'voice':'scan']=false;tick()}
 
-function paintButtons(st){const rb=$('#refresh');rb.disabled=st==='connect'||st==='checking'||running('refresh');rb.textContent=running('refresh')?'Refreshing…':'Refresh';rb.title=st==='connect'?'connect Slack first':'';
+// Update Slack needs Slack connected AND the owner's Slack id known (refresh --slack-only is SKIPPED without it)
+const slackOk=()=>!!(DOC&&DOC.steps&&DOC.steps.some(x=>x.id==='slack'&&x.ok)&&DOC.steps.some(x=>x.id==='self'&&x.ok));
+function paintButtons(st){const rb=$('#refresh');rb.style.display=st==='ready'&&$('#page_home').style.display!=='none'?'':'none';rb.disabled=running('refresh');rb.textContent=running('refresh')?'Refreshing…':'Refresh';   // hidden, not disabled, until setup is done
+ const ub=$('#uslack');ub.style.display=st==='ready'&&slackOk()&&$('#page_home').style.display!=='none'?'':'none';ub.disabled=running('refresh');ub.textContent=running('refresh')?'Updating…':'Update Slack';
  const vb=$('#voicebtn');vb.disabled=!havePeople()||running('voice');vb.textContent=running('voice')?'Learning…':'Learn my tone';vb.title=havePeople()?'':'save Who\'s who first';
- $('#meta').textContent=S?'last refresh '+(S.last_refresh?fmt(S.last_refresh):'never'):'';
+ $('#meta').textContent=S?'last refresh '+(S.last_refresh?fmt(S.last_refresh):'never')+(S.last_slack_refresh?' · slack '+fmt(S.last_slack_refresh):''):'';
  const g=DOC?DOC.steps.find(x=>x.id==='gmail'):null;$('#gmail').textContent=g?(g.ok?'gmail ok':'gmail: not connected (optional)'):'';
- $('#log').textContent=J?['refresh','chase','voice','people','standing'].map(k=>J[k]&&J[k].log?`--- ${k}\n${J[k].log}`:'').filter(Boolean).join('\n'):''}
+ $('#log').textContent=J?Object.keys(J).map(k=>J[k]&&J[k].log?`--- ${k}\n${J[k].log}`:'').filter(Boolean).join('\n'):'';
+ paintDaylog();paintRm()}
 
 // ---------- lists ----------
 function workdays(from){let a=new Date(from),b=new Date(),n=0;a.setHours(0,0,0,0);b.setHours(0,0,0,0);for(let d=new Date(a);d<b;d.setDate(d.getDate()+1)){if(d.getDay()%6)n++;}return n}
@@ -280,45 +414,157 @@ function card(l,dim){const w=workdays(l.asked_at);const sn=l.snooze_until&&l.sno
  const vault=l.channel==='vault';
  const note=l.channel==='note'||(l.manual&&!vault);
  return `<div class="card ${dim||sn?'snoozed':''}"><div class="dot ${col(l)}"></div>
- <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)">✎ chase drafted ${fmt(l.last_chase_at)}</b> — check Slack/Gmail drafts before drafting again`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
- <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'ClaudeCloud / 02-Research/standing-items.md')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${esc(l.notes)}`:''}</div></div>
- <div class="acts">${l.status!=='done'?(vault?`<button onclick="closeVault('${esc(l.id)}')">done</button>`:`<button onclick="act('${esc(l.id)}','done')">done</button>`):`<button onclick="act('${esc(l.id)}','reopen')">reopen</button>`}
- ${l.status==='waiting'&&!note&&!vault?`<button onclick="chase('${esc(l.id)}')" ${running('chase')?'disabled':''}>${willSend(l)?'send chase':'draft chase'}</button>`:''}
- ${vault?'':sn?`<button onclick="act('${esc(l.id)}','unsnooze')">unsnooze</button>`:l.status!=='done'?`<button onclick="snooze('${esc(l.id)}')">snooze</button>`:''}
- ${vault||l.status==='done'?'':`<button onclick="editNote('${esc(l.id)}')">${l.notes?'edit note':'note'}</button>`}
- ${l.status==='waiting'&&!note&&!vault&&C&&C.auto_chase&&C.auto_chase.enabled?(l.auto_off?`<button onclick="act('${esc(l.id)}','auto_on')" title="auto-chase is off for this loop">auto: off</button>`:`<button onclick="act('${esc(l.id)}','auto_off')" title="stop the timer from ${willSend(l)?'sending':'drafting'} chases for this loop" style="border-color:var(--g)">auto: on</button>`):''}</div></div>`}
+ <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)" title="a draft is waiting in Slack/Gmail - check it before drafting again">✎ chase drafted ${fmt(l.last_chase_at)}</b>`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
+ <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'your to-do file')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${linkify(l.notes)}`:''}${(l.links||[]).length?`<br>${l.links.map(x=>`<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.url)}"><span>${esc(x.label||host(x.url))}</span><button type="button" aria-label="remove link" title="remove link" onclick="event.preventDefault();dropLink('${esc(l.id)}','${esc(x.url)}')">×</button></a>`).join('')}`:''}</div></div>
+ <div class="acts" data-id="${esc(l.id)}">${(()=>{
+   // Von Restorff: one primary per card - chase when waiting on them, done when it needs you; everything else quiet
+   const id=esc(l.id),chaseable=l.status==='waiting'&&!note&&!vault;
+   const done=l.status!=='done'?(vault?`<button class="${chaseable?'':'accent'}" onclick="closeVault('${id}')">done</button>`:`<button class="${chaseable?'':'accent'}" onclick="act('${id}','done')">done</button>`):`<button onclick="act('${id}','reopen')">reopen</button>`;
+   const chaseB=chaseable?`<button class="accent" onclick="chase('${id}')" ${running('chase')?'disabled':''}>${willSend(l)?'send chase':'draft chase'}</button>`:'';
+   const snoozeB=vault?'':sn?`<button class="quiet" onclick="act('${id}','unsnooze')">unsnooze</button>`:l.status!=='done'?`<button class="quiet" onclick="snooze('${id}')">snooze</button>`:'';
+   const more=[];
+   if(!vault&&l.status!=='done')more.push(`<button class="quiet" onclick="editNote('${id}')">${l.notes?'edit note':'note'}</button>`,`<button class="quiet" onclick="addLink('${id}')" title="attach a document link (Drive, Miro, Notion…)">+ link</button>`);
+   if(!note&&!vault&&l.status!=='done')more.push(`<button class="quiet" onclick="noteFor('${id}')" title="add a reminder for yourself about this">+ note</button>`);
+   if(chaseable&&C&&C.auto_chase&&C.auto_chase.enabled)more.push(l.auto_off?`<button class="quiet" onclick="act('${id}','auto_on')" title="auto-chase is off for this loop">auto: off</button>`:`<button class="quiet" onclick="act('${id}','auto_off')" title="stop the timer from ${willSend(l)?'sending':'drafting'} chases for this loop" style="color:var(--g)">auto: on</button>`);
+   return chaseB+done+snoozeB+(more.length?`<details${openMore[l.id]?' open':''} ontoggle="openMore['${id}']=this.open"><summary>more ▾</summary><div>${more.join('')}</div></details>`:'')})()}</div></div>`}
+const openMore={};   // which cards have "more" open, so a re-render does not snap it shut under your cursor
 function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=='done'&&!(l.snooze_until&&l.snooze_until>TODAY);
  const needs=L.filter(l=>l.status==='needs_me'&&live(l)),wait=L.filter(l=>l.status==='waiting'&&live(l)).sort((a,b)=>a.asked_at<b.asked_at?-1:1),rest=L.filter(l=>!live(l));
  $('#needs').innerHTML=needs.map(l=>card(l)).join('')||'<div class="empty">nothing waiting on you</div>';
  $('#waiting').innerHTML=wait.map(l=>card(l)).join('')||'<div class="empty">nothing outstanding</div>';
  $('#rest').innerHTML=rest.map(l=>card(l,true)).join('');
- $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`;
+ $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`;paintPins();
  const dl=$('#need_people');if(dl)dl.innerHTML=Object.keys((C&&C.people)||{}).sort().map(n=>`<option value="${esc(n)}">`).join('')}
-async function act(id,action,extra){await api('/api/action',Object.assign({id,action},extra||{}));await loadState();renderLists()}
-function snooze(id){const d=prompt('Snooze until (YYYY-MM-DD)',new Date(Date.now()+2*864e5).toISOString().slice(0,10));if(d)act(id,'snooze',{until:d})}
-function editNote(id){const l=S.loops.find(x=>x.id===id);if(!l)return;const n=prompt('Note',l.notes||'');if(n!==null)act(id,'note',{notes:n})}
-let closingId=null;
-function closeVault(id){const l=S.loops.find(x=>x.id===id);if(!l)return;closingId=id;
- $('#close_title').textContent='How are you closing '+(l.vault_id||id)+'?';
- $('#close_sub').textContent=(l.owner?l.owner+' — ':'')+l.ask;
- $('#close_text').value='';$('#close_ok').disabled=true;$('#close_modal').classList.add('on');$('#close_text').focus()}
-function hideClose(){closingId=null;$('#close_modal').classList.remove('on')}
-async function submitClose(){const closure=$('#close_text').value.trim();if(!closingId||!closure)return;
- const id=closingId;try{await api('/api/action',{id,action:'done',closure});hideClose();if(J)J.standing={running:true};await loadState();renderLists()}
- catch(e){banner('Could not close that: '+e.message)}}
+const who=l=>l?((l.owner?l.owner+' — ':'')+(l.ask||'')).slice(0,60):'';
+// every card action: card dims at once (pending), then a toast says what happened; done/snooze/reopen offer Undo
+const UNDO={done:'reopen',reopen:'done',snooze:'unsnooze',unsnooze:'snooze',auto_off:'auto_on',auto_on:'auto_off'};
+const SAID={done:'Marked done',reopen:'Reopened',snooze:'Snoozed',unsnooze:'Unsnoozed',note:'Note saved',add_link:'Link added',drop_link:'Link removed',auto_off:'Auto-chase off for',auto_on:'Auto-chase on for'};
+async function act(id,action,extra,quiet){const l=S&&S.loops.find(x=>x.id===id);const card=document.querySelector(`.acts[data-id="${CSS.escape(id)}"]`);if(card)card.closest('.card').classList.add('busy');
+ try{await api('/api/action',Object.assign({id,action},extra||{}))}
+ catch(e){if(card)card.closest('.card').classList.remove('busy');toast((SAID[action]||action)+' failed: '+e.message.replace(/^.*-> \d+ /,''),{err:true});throw e}
+ await loadState();renderLists();
+ if(quiet)return;const undoTo=UNDO[action];
+ if(undoTo)toast(`${SAID[action]}: ${who(l)}${action==='snooze'?' until '+extra.until:''}`,{undo:()=>act(id,undoTo,undoTo==='snooze'?{until:l.snooze_until||extra.until}:null,true)});
+ else toast(`${SAID[action]||action}: ${who(l)}`)}
+function snooze(id){const l=S.loops.find(x=>x.id===id);if(!l)return;const day=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+ const nextMon=()=>{const d=new Date();d.setDate(d.getDate()+((8-d.getDay())%7||7));return d.toISOString().slice(0,10)};
+ dlgOpen({title:'Snooze',sub:who(l),ok:'Snooze',fields:[{id:'until',label:'Until',type:'date',value:day(2)}],
+  html:`<div class="quick"><button type="button" onclick="$('#dlg_until').value='${day(1)}'">tomorrow</button><button type="button" onclick="$('#dlg_until').value='${day(2)}'">2 days</button><button type="button" onclick="$('#dlg_until').value='${nextMon()}'">next Monday</button><button type="button" onclick="$('#dlg_until').value='${day(7)}'">a week</button></div>`,
+  onOk:async()=>{const d=dlgVal('until');if(!d)throw new Error('pick a date');await act(id,'snooze',{until:d})}})}
+function editNote(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
+ dlgOpen({title:l.notes?'Edit note':'Add a note',sub:who(l),ok:'Save',fields:[{id:'notes',label:'Note (links become clickable)',type:'textarea',value:l.notes||'',rows:4}],onOk:()=>act(id,'note',{notes:dlgVal('notes')})})}
+function addLink(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
+ dlgOpen({title:'Attach a link',sub:who(l),ok:'Add link',fields:[{id:'url',label:'Link (Drive, Miro, Notion, Figma…)',type:'url',placeholder:'https://…'},{id:'label',label:'Label (optional)',placeholder:'e.g. brief v2'}],
+  onOk:async()=>{const u=dlgVal('url');if(!/^https?:\/\//i.test(u))throw new Error('the link must start with http:// or https://');await act(id,'add_link',{url:u,label:dlgVal('label')})}})}
+function dropLink(id,url){act(id,'drop_link',{url})}
+
+// ---------- pinned links: yours, not a loop's. Stored in config.pinned_links; Miro boards can open in a view-only embed ----------
+const pins=()=>(C&&Array.isArray(C.pinned_links)?C.pinned_links:[]);
+const miroBoard=u=>{const m=/miro\.com\/app\/(?:board|live-embed)\/([^/?#]+)/.exec(u||'');return m?m[1]:''};
+let pinShown=null;
+function paintPins(){const el=$('#pins');if(!el||!C)return;
+ el.innerHTML=pins().map(p=>`<a class="chip" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(p.url)}"><span>${esc(p.label||host(p.url))}</span>${miroBoard(p.url)?`<button type="button" aria-label="view here" title="view here, read-only" onclick="event.preventDefault();pinEmbed('${esc(p.url)}')">▣</button>`:''}<button type="button" aria-label="unpin" title="unpin" onclick="event.preventDefault();pinDrop('${esc(p.url)}')">×</button></a>`).join('')||'<span class="sub">nothing pinned yet - boards and docs you open every day</span>';
+ if(pinShown&&!pins().some(p=>p.url===pinShown))pinEmbed(null)}
+async function savePins(list,msg,undo){const prev=pins();try{await api('/api/config',{pinned_links:list});await loadCfg();paintPins();if(msg)toast(msg,undo?{undo:()=>savePins(prev)}:undefined)}
+ catch(e){toast('Pins not saved: '+e.message.replace(/^.*-> \d+ /,''),{err:true});throw e}}
+function pinAdd(){dlgOpen({title:'Pin a board or document',sub:'Shown at the top of Home. Miro boards can also open here, read-only.',ok:'Pin',
+ fields:[{id:'url',label:'Link',type:'url',placeholder:'https://miro.com/app/board/…  or any document link'},{id:'label',label:'Label (optional)',placeholder:'e.g. Planning board'}],
+ onOk:async()=>{const u=dlgVal('url');if(!/^https?:\/\//i.test(u))throw new Error('the link must start with http:// or https://');if(pins().some(p=>p.url===u))throw new Error('already pinned');
+  await savePins(pins().concat([{url:u,label:dlgVal('label')}]),'Pinned: '+(dlgVal('label')||host(u)))}})}
+function pinDrop(url){const p=pins().find(x=>x.url===url);savePins(pins().filter(x=>x.url!==url),'Unpinned: '+((p&&p.label)||host(url)),true)}
+function pinEmbed(url){const w=$('#pin_embed_wrap'),f=$('#pin_embed');if(!url||url===pinShown){pinShown=null;w.style.display='none';f.removeAttribute('src');return}
+ const p=pins().find(x=>x.url===url)||{url};pinShown=url;$('#pin_embed_title').textContent=p.label||host(url);$('#pin_embed_open').href=url;
+ f.setAttribute('src',`https://miro.com/app/live-embed/${miroBoard(url)}/?autoplay=true&embedMode=view_only_without_ui`);w.style.display='';w.scrollIntoView({behavior:'smooth',block:'nearest'})}
+function noteFor(id){const l=S.loops.find(x=>x.id===id);if(!l)return;$('#need_who').value=l.owner||'';$('#need_ask').value='';$('#need_notes').value='re: '+(l.ask||'');
+ $('#add_need').scrollIntoView({behavior:'smooth',block:'center'});$('#need_ask').focus()}
+function closeVault(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
+ dlgOpen({title:'How are you closing '+(l.vault_id||id)+'?',sub:(l.owner?l.owner+' — ':'')+l.ask,ok:'Mark done',
+  fields:[{id:'closure',label:'What did you do? Name any other standing items this changes (A7, A8…).',type:'textarea',rows:5}],
+  onOk:async()=>{const closure=dlgVal('closure');if(!closure)throw new Error('say how you closed it - this goes into the vault');
+   await api('/api/action',{id,action:'done',closure});if(J)J.standing={running:true};await loadState();renderLists();toast('Marked done and written to the vault: '+(l.vault_id||id))}})}
 async function addNeed(){const owner=$('#need_who').value.trim(),ask=$('#need_ask').value.trim(),notes=$('#need_notes').value.trim();
- if(!ask){banner('Need something to do.');return}
- try{await api('/api/action',{action:'add',owner,ask,notes});$('#need_who').value='';$('#need_ask').value='';$('#need_notes').value='';banner('');await loadState();renderLists()}
- catch(e){banner('Could not add that: '+e.message)}}
-async function refresh(){if(running('refresh'))return;await api('/api/refresh',{});J.refresh={running:true};tick()}
+ if(!ask){$('#need_ask').focus();toast('Type what needs doing first',{err:true});return}
+ try{const r=await api('/api/action',{action:'add',owner,ask,notes});$('#need_who').value='';$('#need_ask').value='';$('#need_notes').value='';banner('');await loadState();renderLists();
+  toast('Added to Needs me: '+(owner?owner+' — ':'')+ask,{undo:()=>act(r.id,'done',null,true),undoLabel:'Undo'})}
+ catch(e){toast('Could not add that: '+e.message.replace(/^.*-> \d+ /,''),{err:true})}}
+const counts=()=>{const L=(S&&S.loops)||[],live=l=>l.status!=='done'&&!(l.snooze_until&&l.snooze_until>TODAY);return{needs:L.filter(l=>l.status==='needs_me'&&live(l)).length,wait:L.filter(l=>l.status==='waiting'&&live(l)).length,ids:new Set(L.map(l=>l.id))}};
+let before=null;   // counts when a refresh started, so the finish toast can say what changed
+async function refresh(slackOnly){if(running('refresh'))return;before=counts();
+ try{await api('/api/refresh',{slack_only:!!slackOnly})}catch(e){toast('Refresh could not start: '+e.message.replace(/^.*-> \d+ /,''),{err:true});return}
+ J.refresh={running:true};tick()}
+
+// ---------- day log: instant digest from state, prose on demand ----------
+let DL=null;
+async function loadDaylog(){try{DL=await api('/api/daylog')}catch(e){DL=null}paintDaylog()}
+function paintDaylog(){const d=DL;if(!d||!$('#dl_digest'))return;const g=d.digest||{};
+ const line=(k,t)=>(g[k]||[]).length?`<div><b>${t}:</b> ${g[k].map(x=>esc((x.owner?x.owner+' — ':'')+x.ask)).join(' · ')}</div>`:'';
+ $('#dl_digest').innerHTML=line('closed','Closed today')+line('opened','Asked today')+line('chased','Chased today')+`<div>${g.waiting||0} waiting on them · ${g.needs_me||0} need you</div>`;
+ $('#dl_meta').textContent=d.written_at?'· written '+fmt(d.written_at):'';
+ const has=!!d.text;$('#dl_text').style.display=has?'':'none';$('#dl_text').textContent=d.text||'';$('#dl_copy').style.display=has?'':'none';$('#dl_open').style.display=d.has_page?'':'none';
+ const b=$('#dl_run');b.disabled=running('daylog');b.textContent=running('daylog')?'Writing…':(has?'Write it again':'Write it up');
+ if(running('daylog'))$('#dl_msg').textContent='reading today\'s messages… about a minute';else if($('#dl_msg').textContent.startsWith('reading'))$('#dl_msg').textContent=''}
+async function writeDaylog(){if(running('daylog'))return;try{await api('/api/daylog',{});J.daylog={running:true};paintDaylog()}catch(e){$('#dl_msg').textContent=e.message}}
+async function copyDaylog(){try{await navigator.clipboard.writeText((DL&&DL.text)||'');$('#dl_msg').textContent='copied'}catch(e){$('#dl_msg').textContent='copy failed — select the text instead'}}
+
+// ---------- roadmap: stage rows here, add cards to the Miro frame through Claude ----------
+let RM=null,rmSaveT=null,rmArmT=null,rmArmed=false,rmRendered='';
+const miroOk=()=>!!(DOC&&DOC.steps&&DOC.steps.some(x=>x.id==='miro'&&x.ok));
+function rmRows(){return (RM&&RM.store&&RM.store.rows)||[]}
+async function loadRm(){try{RM=await api('/api/roadmap')}catch(e){RM=null}rmRendered='';paintRm()}
+function paintRm(){if(!RM||!$('#roadmap'))return;
+ if(!miroOk()){$('#rm_head').textContent='· connect Miro in Claude to use this (see the connection checklist)';$('#roadmap').style.display='none';return}
+ if(!RM.configured.ok){$('#rm_head').textContent='· set the board and frame in ⚙ Settings';$('#roadmap').style.display='none';return}
+ $('#roadmap').style.display='';const b=RM.store.board||{};
+ $('#rm_head').textContent='· '+(b.frame||RM.configured.frame)+(b.read_at?' · read '+fmt(b.read_at):' · board not read yet');
+ const busy=running('roadmap');for(const id of ['#rm_parsebtn','#rm_readbtn','#rm_prevbtn'])$(id).disabled=busy;
+ $('#rm_parsebtn').textContent=busy?'Working…':'Read these notes';if(busy)$('#rm_postbtn').disabled=true;
+ const key=JSON.stringify(RM.store);if(key===rmRendered)return;rmRendered=key;   // only redraw rows when the store changes - never under your cursor
+ $('#rm_board').innerHTML=b.read_at?`<b>${esc(b.frame||'')}</b>${b.url?` · <a href="${esc(b.url)}" target="_blank">open board</a>`:''} · lanes: ${(b.lanes||[]).map(esc).join(', ')||'?'} · columns: ${(b.columns||[]).map(esc).join(', ')||'?'} · ${(b.existing||[]).length} cards on it`:'Press <b>Read board</b> once so the lane and column choices match the frame.';
+ if(document.activeElement!==$('#rm_paste'))$('#rm_paste').value=RM.store.pasted||'';
+ $('#rm_embed_wrap').style.display=RM.embed?'':'none';rmEmbed();
+ renderRmRows();renderRmPreview()}
+// Miro Live Embed: loaded only once the section is opened, and re-pointed when the frame id changes after a Read board
+function rmEmbed(){const w=$('#rm_embed_wrap'),f=$('#rm_embed');if(!RM||!RM.embed||!w.open){return}if(f.getAttribute('src')!==RM.embed)f.setAttribute('src',RM.embed)}
+function renderRmRows(){const rows=rmRows(),b=(RM.store.board||{}),lanes=b.lanes||[],cols=b.columns||[];
+ const opt=(list,v)=>['<option value="">—</option>'].concat((list.includes(v)||!v?list:[v].concat(list)).map(x=>`<option ${x===v?'selected':''}>${esc(x)}</option>`)).join('');
+ const head='<div class="rmrow rmhead"><div>title</div><div>detail</div><div>owners</div><div>lane</div><div>column</div><div>state</div><div></div></div>';
+ $('#rm_rows').innerHTML=rows.length?head+rows.map((r,i)=>{const d=r.posted_id?'disabled':'';return `<div class="rmrow${r.posted_id?' snoozed':''}">
+  <input value="${esc(r.title)}" placeholder="what" onchange="rmSet(${i},'title',this.value)" ${d}>
+  <input value="${esc(r.detail)}" placeholder="detail" onchange="rmSet(${i},'detail',this.value)" ${d}>
+  <input value="${esc(r.owners)}" placeholder="who" onchange="rmSet(${i},'owners',this.value)" ${d}>
+  <select onchange="rmSet(${i},'lane',this.value)" ${d}>${opt(lanes,r.lane)}</select>
+  <select onchange="rmSet(${i},'column',this.value)" ${d}>${opt(cols,r.column)}</select>
+  <select onchange="rmSet(${i},'state',this.value)" ${d}>${['not_started','in_progress','done'].map(s=>`<option value="${s}" ${s===r.state?'selected':''}>${s.replace('_',' ')}</option>`).join('')}</select>
+  <div>${r.posted_id?'<span class="pill" title="already on the board">✓</span>':`<button onclick="rmDrop(${i})" title="remove row">×</button>`}</div></div>`}).join(''):'<div class="empty">no rows yet — paste notes and press Read these notes, or add a row by hand</div>'}
+function rmSet(i,f,v){rmRows()[i][f]=v;rmDisarm();rmSave()}
+function rmDrop(i){rmRows().splice(i,1);rmRendered='';paintRm();rmDisarm();rmSave()}
+function rmAddRow(){const b=RM.store.board||{};rmRows().push({title:'',detail:'',owners:'',lane:(b.lanes||[])[0]||'',column:(b.columns||[])[0]||'',state:'not_started',source:'hand'});rmRendered='';paintRm();rmDisarm();rmSave()}
+function rmTouch(){rmDisarm();rmSave()}
+function rmSave(){clearTimeout(rmSaveT);rmSaveT=setTimeout(async()=>{try{RM.store.pasted=$('#rm_paste').value;rmRendered=JSON.stringify(RM.store);await api('/api/roadmap',{mode:'save',rows:rmRows(),pasted:RM.store.pasted})}catch(e){$('#rm_msg').textContent='not saved: '+e.message}},500)}
+async function rmJob(mode,extra){try{$('#rm_msg').textContent='';const r=await api('/api/roadmap',Object.assign({mode},extra||{}));if(r.started===false){$('#rm_msg').textContent='already running';return}J.roadmap={running:true};paintRm()}catch(e){$('#rm_msg').textContent=e.message.replace(/^.*-> \d+ /,'')}}
+function rmRead(){rmJob('read')}
+function rmParse(){const p=$('#rm_paste').value.trim();if(!p){$('#rm_msg').textContent='paste some notes first';return}clearTimeout(rmSaveT);rmJob('parse',{pasted:p})}
+function rmPreview(){rmDisarm();rmJob('preview')}
+function rmDisarm(){rmArmed=false;clearTimeout(rmArmT);const b=$('#rm_postbtn');if(b){b.disabled=true;b.textContent='Add to the roadmap'}if($('#rm_armmsg'))$('#rm_armmsg').textContent=''}
+function renderRmPreview(){const pv=RM.store.preview||{},plan=pv.plan||[],rows=rmRows();
+ if(!pv.at||!plan.length){$('#rm_preview').innerHTML='';rmDisarm();return}
+ const byId=Object.fromEntries(rows.map(r=>[r.id,r]));
+ $('#rm_preview').innerHTML=`<div>Preview ${fmt(pv.at)}:</div>`+plan.map(p=>`<div>${p.action==='add'?'➕':'⏭'} <b>${esc((byId[p.id]||{}).title||p.id)}</b> — ${esc(p.why||p.action)}</div>`).join('');
+ const adds=plan.filter(p=>p.action==='add').length;const b=$('#rm_postbtn');
+ if(adds&&!running('roadmap')){b.disabled=false;b.textContent=`Add ${adds} to the roadmap`}}
+async function rmPost(){if(!rmArmed){rmArmed=true;$('#rm_armmsg').textContent='press again within 6s — this adds cards to a board other people share';clearTimeout(rmArmT);rmArmT=setTimeout(()=>{rmArmed=false;$('#rm_armmsg').textContent=''},6000);return}
+ rmArmed=false;$('#rm_armmsg').textContent='';await rmJob('build',{confirm:true})}
 async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
  if(willSend(l)&&!confirm(`This will SEND a chase to ${l.owner} right now, in your name, without you seeing it first.\n\nSend?`))return;
  if(!willSend(l)&&l.last_chase_at&&!confirm(`You already ${l.last_chase_mode==='send'?'sent':'drafted'} a chase for ${l.owner} on ${fmt(l.last_chase_at)}.\nIf a draft is still unsent this will create a second one.\n\nDraft another?`))return;
- await api('/api/chase',{id});J.chase={running:true};tick()}
+ try{await api('/api/chase',{id})}catch(e){toast('Chase could not start: '+e.message.replace(/^.*-> \d+ /,''),{err:true});return}
+ J.chase={running:true};toast((willSend(l)?'Sending a chase to ':'Drafting a chase for ')+l.owner+'… about a minute');tick()}
 
 // ---------- settings form: painted only on first open and after Save, never by background ticks ----------
-function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_use_slack').checked=!!C.use_slack;$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
- if($('#cfg_vault'))$('#cfg_vault').value=C.vault_path||'';
+function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_model').value=C.model===undefined?'sonnet':(C.model||'');$('#cfg_effort').value=C.effort===undefined?'xhigh':(C.effort||'');$('#cfg_model_wrap').style.display=(C.agent||'claude')==='claude'?'':'none';$('#cfg_use_slack').checked=!!C.use_slack;$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
+ $('#cfg_standing').value=C.standing_file||C.vault_path||'';standingStatus();
+ $('#cfg_rm_board').value=C.roadmap_board||'';$('#cfg_rm_frame').value=C.roadmap_frame||'';
+ $('#cfg_slack_src').textContent=(C.agent||'claude')==='claude'?[C.slack_source?'Slack route detected: '+(C.slack_source==='connector'?'claude.ai connector':'Slack plugin'):'',C.miro_source?'Miro route detected: '+(C.miro_source==='connector'?'claude.ai connector':'Miro plugin'):''].filter(Boolean).join(' · ')+(C.slack_source||C.miro_source?' — jobs use the matching tools automatically.':''):'';
  if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=(C.agent||'claude')==='grok'?'':'none';
  $('#cfg_ext').checked=!!C.chase_external_email;$('#cfg_send_int').checked=!!C.send_internal;$('#cfg_send_ext').checked=!!C.send_external;$('#cfg_domains').value=(C.internal_domains||[]).join(', ');
  const A=C.auto_chase||{};$('#cfg_auto').checked=!!A.enabled;$('#cfg_auto_days').value=A.after_workdays||3;$('#cfg_auto_max').value=A.max_chases||3;
@@ -333,29 +579,56 @@ function paintVoice(){if(V&&haveVoice()){$('#voice_meta').textContent='learned '
 async function saveCfg(){try{const tone={};document.querySelectorAll('[data-tone]').forEach(t=>tone[t.dataset.tone]=t.value);
  // people: radios in the table win; the JSON box is the fallback for adding/removing entries
  let people=JSON.parse($('#cfg_people').value);Object.keys(C.people||{}).forEach((n,i)=>{const v=document.querySelector(`input[name="pp${i}"]:checked`);if(v&&people[n])people[n].level=v.value});
- const body={agent:$('#cfg_agent').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),vault_path:($('#cfg_vault')&&$('#cfg_vault').value.trim())||'',chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
+ const body={agent:$('#cfg_agent').value,model:$('#cfg_model').value,effort:$('#cfg_effort').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),standing_file:$('#cfg_standing').value.trim(),vault_path:'',roadmap_board:$('#cfg_rm_board').value.trim(),roadmap_frame:$('#cfg_rm_frame').value.trim(),chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
   exclude_people:$('#cfg_excl_people').value.split(',').map(s=>s.trim()).filter(Boolean),exclude_topics:$('#cfg_excl_topics').value.split(',').map(s=>s.trim()).filter(Boolean)};
  const agentChanged=(C.agent||'claude')!==body.agent,slackChanged=!!C.use_slack!==body.use_slack;
- await api('/api/config',body);$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString();await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message}}
+ await api('/api/config',body);dirty=false;$('#cfg_save').textContent='Save settings';$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString()+(agentChanged||slackChanged?' - re-checking connections on Home':'');toast('Settings saved');await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);await loadRm();tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message;toast('Settings not saved: '+e.message.replace(/^.*-> \d+ /,''),{err:true})}}
+// the to-do file box: say whether the file is there and how many open items it has; offer to create it
+async function standingStatus(){try{const typed=$('#cfg_standing').value.trim();const s=await api('/api/standing'+(typed?'?path='+encodeURIComponent(typed):''));const el=$('#standing_status'),b=$('#standing_create');
+  if(s.exists){el.textContent=`found: ${s.path} · ${s.open} open item${s.open===1?'':'s'}`;b.style.display='none'}
+  else{el.textContent=$('#cfg_standing').value.trim()?`no file at ${s.path} yet`:'not set - nothing is read';b.style.display=$('#cfg_standing').value.trim()?'':'none'}}catch(e){}}
+async function standingCreate(){const b=$('#standing_create');b.disabled=true;try{if(dirty){await saveCfg()}const r=await api('/api/standing/create',{});toast('Starter file created: '+r.path+' - open it in your editor and replace the example line');await standingStatus();await loadState();renderLists()}
+ catch(e){toast('Could not create it: '+e.message.replace(/^.*-> \d+ /,''),{err:true})}b.disabled=false}
+// Zeigarnik: an edited-but-unsaved form says so on the sticky bar (Save is always within reach) and on leaving the tab
+let dirty=false;
+function cfgDirty(){if(dirty)return;dirty=true;$('#cfg_save').textContent='Save settings (unsaved changes)';$('#cfg_msg').textContent=''}
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 async function saveTime(){$('#time_msg').textContent='updating task…';const r=await api('/api/schedule',{time:$('#cfg_time').value});$('#time_msg').textContent=r.ok?'scheduled weekdays at '+$('#cfg_time').value:'failed: '+(r.error||r.out)}
 async function learnVoice(){if(!havePeople()||running('voice'))return;kicked.voice=true;await api('/api/voice',{});J.voice={running:true};paintButtons(stage())}
-async function startOver(){if(!confirm('Wipe the list, people picks and learned tone, and go back to step 1?'))return;await api('/api/reset',{});DOC=null;docAt=0;P=null;peopleRendered='';Object.keys(kicked).forEach(k=>delete kicked[k]);formPainted=false;await loadCfg();showTab('home');loop()}
+async function startOver(){if(!confirm('Wipe the list, people picks and learned tone, and go back to step 1?\n\nThis cannot be undone.'))return;await api('/api/reset',{});DOC=null;docAt=0;P=null;peopleRendered='';Object.keys(kicked).forEach(k=>delete kicked[k]);formPainted=false;await loadCfg();showTab('home');loop()}
 async function openClaude(){await api('/api/open-claude',{});$('#setup_msg').textContent=agentLabel()+' window opened — finish there, then come back. The ticks update by themselves.'}
 
 // ---------- doctor + the main loop ----------
 let docAt=0;
 async function doctor(force){$('#setup_msg').textContent=force?'checking…':'';DOC=await api('/api/doctor',{force:!!force,detect:true});docAt=Date.now();if(force){$('#setup_msg').textContent='';tick()}}
-let wasRunning=false,loopT=null;
+let wasRunning=false,loopT=null,said={};
+// Peak-End: when a job ends, say what it did and what is next - never just let the spinner vanish
+function finished(){if(!J)return;for(const k of Object.keys(J)){const j=J[k];if(!j||j.running||j.rc===undefined||said[k]===j.log)continue;said[k]=j.log;
+ const ok=j.rc===0,tail=(j.log||'').trim().split('\n').pop()||'';
+ if(!ok&&j.rc===2){toast(`${k}: skipped - ${tail.replace(/^SKIPPED:?\s*/i,'')}`,{ms:6000});continue}
+ if(!ok){toast(`${k} didn't finish - details under "Last job output"`,{err:true,ms:8000});continue}
+ if(k==='refresh'){const a=counts(),b=before||a;const fresh=[...a.ids].filter(x=>!b.ids.has(x)).length;before=null;
+  toast(`Refresh done: ${fresh} new, ${a.needs} need you, ${a.wait} waiting on them`);continue}
+ if(k==='chase')toast('Chase '+(/sent/i.test(tail)?'sent':'drafted')+' - check the thread',{ms:6000});
+ else if(k==='daylog')toast('Day log written - copy it or open the page below');
+ else if(k==='roadmap')toast('Roadmap step done - see the result in the Roadmap section');
+ else if(k==='voice')toast('Tone learned - chases will sound like you');
+ else if(k==='people')toast('People suggested - pick their seniority');}}
 async function loop(){clearTimeout(loopT);try{
   await loadState();
   const now=Object.values(J).some(j=>j.running);
-  if(wasRunning&&!now)await loadCfg();          // a job just finished: pick up new people/voice/config
+  if(wasRunning&&!now){await loadCfg();await loadDaylog();await loadRm();finished()}   // a job just finished: pick up new people/voice/config/day log/roadmap, say what happened
   wasRunning=now;
   const st=stage();
   if((st==='connect'||st==='checking')&&Date.now()-docAt>60000)await doctor(false);
   await tick();banner('');
  }catch(e){banner('Something went wrong talking to the app: '+e.message+' — if it keeps happening, close this tab and open Open Loops again.')}
  const st=stage();loopT=setTimeout(loop,(J&&Object.values(J).some(j=>j.running))||st!=='ready'?4000:60000)}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)loop()});
-(async()=>{try{await loadCfg();await loadState();await doctor(false)}catch(e){banner('Could not start: '+e.message)}loop()})();
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!stopped)loop()});
+window.addEventListener('pagehide',()=>{if(stopped)return;const b=new Blob([JSON.stringify({page:PAGE})],{type:'application/json'});if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/bye',b)))fetch('/api/bye',{method:'POST',body:b,keepalive:true}).catch(()=>{})});
+window.addEventListener('pageshow',e=>{if(e.persisted&&!stopped)loop()});   // back/forward cache restore: say hello again before the grace runs out
+async function quitApp(){const b=$('#quitbtn');b.disabled=true;try{const r=await api('/api/quit',{});stopped=true;clearTimeout(loopT);
+  const after=r.after_jobs&&r.after_jobs.length?' once the running '+r.after_jobs.join(', ')+' job finishes':'';
+  banner('Open Loops is stopping'+after+'. You can close this tab; double-click the Open Loops icon to start it again.')}catch(e){b.disabled=false;banner('Could not stop: '+e.message)}}
+(async()=>{try{await loadCfg();await loadState();await doctor(false);await loadDaylog();await loadRm()}catch(e){banner('Could not start: '+e.message)}loop()})();
 </script></body></html>

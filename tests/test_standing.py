@@ -88,7 +88,7 @@ try:
     a6 = next(l for l in loops if l["id"] == "vault-A6")
     check(a6["status"] == "needs_me" and a6["channel"] == "vault" and a6["owner"] == "Claude Code Vault",
           "vault card shape")
-    check(a6.get("source", "").endswith("02-Research/standing-items.md") and a6.get("vault_flag") == "new",
+    check(a6.get("source", "") == "standing-items.md" and a6.get("vault_flag") == "new",
           "card says where it came from and flags first sighting as new")
     st = json.loads((app / "state.json").read_text(encoding="utf-8"))
     check("A6" in (st.get("vault_seen") or {}) and "loops" in st and not any(l.get("channel")=="vault" for l in st["loops"]),
@@ -115,7 +115,7 @@ try:
     check("vault-A6" not in ids and "vault-A7" in ids, "closed item leaves Needs me; others stay")
 
     html = (app / "openloops" / "index.html").read_text(encoding="utf-8")
-    check("closeVault(" in html and "How are you closing" in html and "close_ok" in html,
+    check("closeVault(" in html and "How are you closing" in html and "dlgOpen(" in html and "Mark done" in html,
           "Home tab has the compulsory close popup")
 finally:
     srv.terminate()

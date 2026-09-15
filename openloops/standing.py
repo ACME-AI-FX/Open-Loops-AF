@@ -1,8 +1,16 @@
-"""Read/write ClaudeCloud standing-items.md. Line format must stay Telegram-compatible.
+"""Read/write the owner's optional standing-items file: a markdown to-do list they keep in their own
+notes (Obsidian vault, a synced folder, a git repo - anywhere on disk). Open lines show on the Home
+tab as "Needs me" cards; Done asks how the item was closed and writes that back into the file.
+
+Line format (one item per line, ids A1, A2, ...; must stay Telegram-compatible):
 
     - [ ] A1 | project | action | added YYYY-MM-DD [| snoozed-until YYYY-MM-DD]
     - [x] A1 | project | action | added YYYY-MM-DD | done YYYY-MM-DD
     - [-] A1 | project | action | added YYYY-MM-DD | dropped YYYY-MM-DD
+
+config.json "standing_file" is the path to that file. The older "vault_path" (a folder holding
+02-Research/standing-items.md) still works. Blank = the feature is off unless ~/ClaudeCloud/
+02-Research/standing-items.md happens to exist.
 """
 import hashlib, json, re
 from datetime import date, datetime
@@ -15,16 +23,71 @@ ITEM_RE = re.compile(
 )
 
 
+LEGACY_REL = Path("02-Research") / "standing-items.md"
+
+
+def _cfg():
+    from .store import load_cfg
+    return load_cfg()
+
+
+def standing_path(cfg=None):
+    """The file, from "standing_file" (a file path), else "vault_path" (a folder or a file), else
+    the historical default under ~/ClaudeCloud. A folder means <folder>/02-Research/standing-items.md."""
+    cfg = cfg if cfg is not None else _cfg()
+    p = (cfg.get("standing_file") or cfg.get("vault_path") or "").strip()
+    if not p:
+        return Path.home() / "ClaudeCloud" / LEGACY_REL
+    p = Path(p).expanduser()
+    if p.suffix.lower() in (".md", ".txt", ".markdown"):
+        return p
+    return p / LEGACY_REL
+
+
 def vault_root():
-    cfg = {}
-    if CONFIG.exists():
-        cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
-    p = (cfg.get("vault_path") or "").strip()
-    return Path(p).expanduser() if p else Path.home() / "ClaudeCloud"
+    return standing_path().parent
 
 
-def standing_path():
-    return vault_root() / "02-Research" / "standing-items.md"
+STARTER = """# Standing items
+
+updated: {today}
+
+One line per item. Tick it off here or press done in Open Loops - Open Loops writes back to this file.
+Format: - [ ] A<number> | project | what to do | added YYYY-MM-DD
+
+## Open
+
+- [ ] A1 | Open Loops | replace this example with something you actually need to do | added {today}
+
+## Closed
+
+(none yet)
+
+## Closure notes
+
+"""
+
+
+def create_starter(path=None):
+    """Write an example file at the configured path (or `path`). Never overwrites. Returns the Path."""
+    p = Path(path).expanduser() if path else standing_path()
+    if p.exists():
+        raise FileExistsError(str(p))
+    p.parent.mkdir(parents=True, exist_ok=True)
+    p.write_text(STARTER.format(today=_today()), encoding="utf-8")
+    return p
+
+
+def status(path=None):
+    """For the Settings box: where the file is, whether it exists, how many open items it has.
+    `path` (the value typed in Settings, not yet saved) is resolved the same way as the setting."""
+    p = standing_path({"standing_file": path}) if path else standing_path()
+    ok = p.exists()
+    n = 0
+    if ok:
+        n = sum(1 for ln in p.read_text(encoding="utf-8").splitlines()
+                if (m := ITEM_RE.match(ln)) and m.group(1) == " " and not _snoozed_future(m.group(6), _today()))
+    return {"path": str(p.resolve() if p.exists() else p), "exists": ok, "open": n}
 
 
 def _today():
@@ -83,12 +146,7 @@ def _fp(it):
 
 
 def _source_label():
-    p = standing_path()
-    try:
-        rel = p.resolve().relative_to(vault_root().resolve())
-        return f"ClaudeCloud / {rel.as_posix()}"
-    except Exception:
-        return str(p)
+    return standing_path().name
 
 
 def touch_seen(state, items):
@@ -227,7 +285,7 @@ def close_item(item_id, closure):
         raise ValueError("say how you are closing it")
     lines = _read()
     if lines is None:
-        raise ValueError("no standing-items file in the vault")
+        raise ValueError("no standing-items file at the path in Settings")
     idx, match = None, None
     for i, ln in enumerate(lines):
         m = ITEM_RE.match(ln)

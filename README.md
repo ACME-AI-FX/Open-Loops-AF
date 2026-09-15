@@ -37,7 +37,7 @@ they can keep in their head. Connect either source, or both. Each works on its o
   guilt.
 - **Keeps your own to-dos in the same place.** Add a note with or without a contact, so the jobs only you
   can do sit next to the real threads instead of in a separate app you stop opening.
-- **Reads a `standing-items.md` notes file, if you keep one**, so open items you wrote down in your notes
+- **Reads your own to-do file, if you keep one** (any markdown file; Settings → Connections), so open items you wrote down in your notes
   show up on the same morning list. Marking one done asks how you closed it and writes that back to the
   file.
 - **Closes loops properly.** *done* and *snooze* are local. A loop you have closed is still watched for
@@ -45,11 +45,23 @@ they can keep in their head. Connect either source, or both. Each works on its o
 - **Ready before you sit down.** It refreshes itself every weekday morning, by default at 09:15.
 - **Optional timer**, off unless you switch it on: chases anything quiet for N workdays automatically, with
   a cap per loop and an *auto: on/off* switch on every card.
+- **Links and notes live on the card.** *+ link* attaches the doc a loop is about (Drive, Miro, Notion, Figma)
+  and the refresh captures any document link it sees in the thread. *+ note* is a reminder to yourself about
+  that person's ask.
+- **Pinned**, at the top of Home: the boards and docs you open every day, yours rather than a loop's. A
+  Miro board pin opens the board right there, read-only.
+- **Day log**: what moved today, straight from the tracker, plus *Write it up*, which reads today's sent
+  messages and drafts a short first-person note (Done / Moved / Waiting on) you can copy or print.
+- **Roadmap** (needs Miro): paste standup notes, check the rows it reads out of them, preview, then add
+  one sticky note per row to a frame on your Miro roadmap. It never deletes, moves or edits anything there.
+- **Closing the tab stops the app.** No stray server to hunt for in Task Manager. *Quit* in Settings does
+  the same, and the next double-click starts fresh.
 
-Setting up takes one pass through Settings. On first run it suggests the dozen or so people you message
-most, guesses *senior / peer / junior / external* for each, and asks you to correct it. *Learn my tone*
-then reads how you actually write to them, which is what makes the drafts sound like you rather than like
-a reminder bot.
+Setting up takes one pass through Settings. On first run the page shows only the setup steps: it suggests
+the dozen or so people you message most, guesses *senior / peer / junior / external* for each, and asks you
+to correct it. *Learn my tone* then reads how you actually write to them, which is what makes the drafts
+sound like you rather than like a reminder bot. Every action gives instant feedback, and *done* and
+*snooze* come with an Undo.
 
 ## Why it's safe to trust
 
@@ -60,16 +72,59 @@ a reminder bot.
 - **Drafts by default.** It sends only if you tick *Send to internal* / *Send to external*. The send tools
   are handed to the AI run only when those boxes are ticked, so with both off it cannot send.
 - **No API key costs and no new accounts.** It drives the Claude or Grok CLI you are already signed in to.
+  Jobs run on Sonnet by default; the model and effort are a picker in Settings, so a scan never quietly
+  burns your best model.
 - **Every run leaves a log** in `state/logs/`, so you can see what it looked at and what it decided.
 - **Open source, MIT licence.** Read it before you point it at your inbox.
 
 ## Install (1–3 minutes)
 
 1. **Windows:** double-click `Open Loops.cmd`. **Mac:** double-click `Open Loops.command` (if macOS blocks it, right-click → Open).
-2. Tick the checklist: sign in, connect Slack and/or Gmail (one is enough).
+2. Tick the checklist: sign in, connect Slack and/or Gmail (one is enough). Miro is optional and only
+   needed for the Roadmap section.
 3. Open **Open Loops** from the Desktop each morning (Mac: orange-loop app — drag it to the Dock).
 
 Guides: [GETTING-STARTED.md](GETTING-STARTED.md) · [INSTALL.md](INSTALL.md) (Grok Gmail step is here).
 What is planned next: [ROADMAP.md](ROADMAP.md).
 
 MIT licence. WhatsApp is not possible (no API for personal accounts).
+
+## Running from a checkout (developers)
+
+The installed copy lives in `%LOCALAPPDATA%\OpenLoops` (Mac: `~/Documents/OpenLoops`) and answers on port 8765.
+A git checkout is a second, separate copy with its own gitignored `config.json` and `state.json`. From the
+checkout folder, in any terminal (needs Node for the `npm` wrapper, nothing is installed):
+
+| Command | What it does |
+|---|---|
+| `npm run dev` | start this checkout on http://localhost:8766 and open the browser (never collides with the installed copy) |
+| `npm run stop` | stop it, same as closing its tab |
+| `npm test` | every `tests/test_*.py`, with a summary |
+| `npm run doctor` | the connection checklist with Slack / Miro route detection |
+| `npm run refresh` | one refresh job in the foreground (`-- --slack-only` for the quick pass) |
+| `npm run setup` | install or upgrade the installed copy from this checkout (keeps its config and state) |
+
+Anything after `--` is passed through, e.g. `npm run dev -- --no-browser`. Without Node:
+`python -m openloops.app --port 8766`, `python -m openloops.app --stop --port 8766`, `python tests/run_all.py`.
+The full developer guide (two copies / two ports, making a change, where things live, conventions) is
+[CONTRIBUTING.md](CONTRIBUTING.md).
+
+## What's in the folder
+
+| Path | What it does |
+|---|---|
+| `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`; `--port N` to choose, `--stop` quits a running one, as does closing the tab) |
+| `package.json`, `scripts/loops.mjs` | `npm run dev` / `stop` / `test` / `doctor` / `refresh` / `setup` for a checkout (no npm packages) |
+| `openloops/refresh.py` | finds new asks, checks open threads for replies (`--slack-only` for a quick Slack pass) |
+| `openloops/chase.py` · `autochase.py` | drafts (or, if you tick the boxes, sends) a nudge; the optional timer |
+| `openloops/voice.py` · `people.py` | learns how you write to each person; finds who you talk to most |
+| `openloops/daylog.py` | what moved today, digest + optional first-person write-up |
+| `openloops/roadmap.py` | paste standup notes, add cards to a Miro roadmap frame (needs the Miro plugin) |
+| `openloops/standing.py` | the optional to-do file: reads open lines, writes back how you closed them |
+| `openloops/index.html` | the whole page: CSS, markup, JS |
+| `openloops/doctor.py` | the "are you connected?" check (`python -m openloops.doctor`) |
+| `config.json` · `state.json` | your settings and your list (private, gitignored) · `state/logs/` one log per run |
+| `scripts/` | weekday scheduled refresh (Task Scheduler / launchd) |
+
+Read `INSTALL.md` §7 before installing: the Slack plugin-vs-connector gotcha is the one that bites.
+Want to change it? [CONTRIBUTING.md](CONTRIBUTING.md).

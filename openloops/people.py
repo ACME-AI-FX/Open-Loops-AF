@@ -12,7 +12,8 @@ from pathlib import Path
 
 from . import agent
 from .paths import ROOT
-CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8-sig"))
+from .store import load_cfg
+CFG = load_cfg()
 OUT = ROOT / "people_suggested.json"
 LOG = ROOT / "state" / "logs"
 LOG.mkdir(parents=True, exist_ok=True)

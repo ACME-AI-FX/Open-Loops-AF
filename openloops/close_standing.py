@@ -15,7 +15,7 @@ PAYLOAD = ROOT / "state" / "standing-close.json"
 
 PROMPT = """UNATTENDED RUN - nobody can answer questions. Output only the JSON block.
 
-Oscar just closed standing item {item_id} ({project}):
+{name} just closed standing item {item_id} ({project}):
 {action}
 
 How he closed it:
@@ -25,7 +25,7 @@ Remaining open standing items:
 {open_items}
 
 If that explanation clearly changes another open item, return updates.
-Only touch an item Oscar named by ID (A7, A8, …) or described so it can only be one of the list.
+Only touch an item {name} named by ID (A7, A8, …) or described so it can only be one of the list.
 Prefer "edit" (rewrite the action) over "done" or "drop". Do not invent work. Do not re-close {item_id}.
 
 <<<STANDING>>>
@@ -48,7 +48,9 @@ def main():
         return
     remaining = standing.open_items()
     open_txt = "\n".join(f"- {x['id']} | {x['project']} | {x['action']}" for x in remaining) or "(none)"
+    from .store import load_cfg
     prompt = PROMPT.format(
+        name=load_cfg().get("owner_name") or "The owner",
         item_id=item_id, project=project, action=action,
         closure=closure, open_items=open_txt,
     )

@@ -44,20 +44,31 @@ def claude_steps(steps):
     steps.append({"id": "login", "ok": logged, "title": f"Signed in to Claude{(' as ' + email) if email else ''}",
                   "fix": "Click 'Open Claude' below, then follow the sign-in link it shows. Use your work Google account." if not logged else ""})
 
-    slack = gmail = False
+    slack = gmail = miro = False
+    slack_source = ""  # "plugin" (plugin:slack:slack) or "connector" (claude.ai Slack) - jobs need the right prefix
+    miro_source = ""   # same two routes for Miro; the plugin wins if both are connected
     if logged:
         rc, txt = run(["claude", "mcp", "list"], timeout=90)
         for line in txt.splitlines():
             low = line.lower()
-            if "slack" in low and "connected" in low and "failed" not in low:
+            up = "connected" in low and "failed" not in low
+            if "slack" in low and up:
                 slack = True
-            if "gmail" in low and "connected" in low and "failed" not in low:
+                slack_source = "plugin" if "plugin" in low else "connector"
+            if "gmail" in low and up:
                 gmail = True
+            if "miro" in low and up:
+                miro = True
+                src = "plugin" if "plugin" in low else "connector"
+                if miro_source != "plugin":
+                    miro_source = src
     steps.append({"id": "slack", "ok": slack, "optional": True, "title": "Slack connected (optional)",
                   "fix": "Click 'Open Claude', type /mcp and press Enter, choose Slack, then Authenticate and approve in the browser." if not slack else ""})
     steps.append({"id": "gmail", "ok": gmail, "optional": True, "title": "Gmail connected (optional)",
                   "fix": "Click 'Open Claude', type /mcp and press Enter, choose 'claude.ai Gmail', then Authenticate and approve in the browser." if not gmail else ""})
-    return email, slack, gmail
+    steps.append({"id": "miro", "ok": miro, "optional": True, "title": "Miro connected (optional, for the Roadmap card)",
+                  "fix": "Click 'Open Claude', type /mcp and press Enter, choose Miro (the claude.ai connector, or the miro plugin if installed), Authenticate and approve in the browser." if not miro else ""})
+    return email, slack, gmail, slack_source, miro, miro_source
 
 
 def grok_steps(steps):
@@ -119,13 +130,24 @@ def grok_steps(steps):
         gmail_fix = ""
     steps.append({"id": "gmail", "ok": gmail, "optional": True, "title": "Gmail connected (optional)",
                   "fix": gmail_fix})
-    return email, slack, gmail
+    return email, slack, gmail, "", False, ""
 
 
 def main(detect=False):
     cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig")) if CONFIG.exists() else {}
     out = {"steps": [], "agent": agent.name()}
-    email, slack, gmail = (grok_steps if agent.name() == "grok" else claude_steps)(out["steps"])
+    email, slack, gmail, slack_source, miro, miro_source = (grok_steps if agent.name() == "grok" else claude_steps)(out["steps"])
+    out["miro"] = miro
+    # Remember which Slack / Miro route Claude has, so the job scripts allow the right tool prefix.
+    changed = False
+    for key, val in (("slack_source", slack_source), ("miro_source", miro_source)):
+        if val and cfg.get(key) != val:
+            cfg[key] = val
+            changed = True
+    if changed:
+        CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+    out["slack_source"] = slack_source or cfg.get("slack_source") or ""
+    out["miro_source"] = miro_source or cfg.get("miro_source") or ""
 
     # Sources are pluggable: any ONE of them is enough to be useful
     out["steps"].append({"id": "channel", "ok": slack or gmail, "title": "At least one source connected (Slack or Gmail)",

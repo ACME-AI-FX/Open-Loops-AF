@@ -1,17 +1,16 @@
-"""Timer-driven chasing. Run after refresh (the 08:40 task does this).
+"""Timer-driven chasing. Run after refresh (the morning task does this).
 
 For every loop that is: waiting, not snoozed, not marked auto-off, and quiet for at least
 config.auto_chase.after_workdays since the ask (or since the last chase), run chase.py on it.
 Whether that chase is a draft or a real send is decided by the send_internal / send_external
 tick boxes exactly as for a manual chase. Off unless config.auto_chase.enabled is true.
 """
-import json, subprocess, sys
+import subprocess, sys
 from datetime import date, datetime
-from pathlib import Path
 
 from .paths import ROOT
-STATE = ROOT / "state.json"
-CFG = json.loads((ROOT / "config.json").read_text(encoding="utf-8-sig"))
+from .store import load_cfg, load_state
+CFG = load_cfg()
 
 
 def workdays_since(iso):
@@ -31,7 +30,7 @@ def main():
         print("weekend - skipped"); return
     after = int(ac.get("after_workdays", 3))
     max_n = int(ac.get("max_chases", 3))
-    s = json.loads(STATE.read_text(encoding="utf-8-sig"))
+    s = load_state()
     today = date.today().isoformat()
     due = []
     for l in s["loops"]:

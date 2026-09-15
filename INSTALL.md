@@ -84,10 +84,39 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 - Double-click **Open Loops** → page opens at http://localhost:8765 (already refreshed by the morning job).
   If another program already uses port 8765, Open Loops picks the next free port and opens the browser
   there instead; set `OPENLOOPS_PORT` if you want a fixed one.
+- **Pinned** (top of Home): the boards and docs you open every day, yours rather than a loop's. *+ pin* takes any
+  link; a Miro board chip also gets a ▣ that opens the board right there, read-only (Miro's free live embed, no
+  API call). Stored as `pinned_links` in config.json; unpin with × (Undo for a few seconds).
+- **Your own to-do file (optional)**: Settings → Connections. Point it at a markdown file you already keep (or press
+  *Create a starter file there*). Open lines appear under Needs me; pressing done asks how you closed the item and
+  writes that back. The format and everything else Open Loops logs are listed under that setting. The old
+  `vault_path` folder setting still works.
+- **Closing the tab stops the app** a few seconds later (it waits for any running job first), so the next
+  double-click starts fresh with whatever code is installed. *Quit Open Loops* at the bottom of Settings does the same
+  without closing the tab, and `python -m openloops.app --stop` does it from a terminal. If the tab just vanished
+  (browser crash, laptop shut), the app notices within 15 minutes, and in any case quits after 3 h idle.
 - **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
-- **done / snooze / reopen** are local only. Recently-closed loops are still watched for 5 days and reopen if the person comes back with a new question.
+- **done / snooze / reopen** are local only, and each one shows a toast with **Undo** for a few seconds. Snooze offers
+  tomorrow / 2 days / next Monday / a week or a date. Recently-closed loops are still watched for 5 days and reopen if the
+  person comes back with a new question. Each card shows its one main action (draft chase, or done when it needs you);
+  note, + link, + note and the auto-chase switch sit under **more ▾**.
 - **⚙ Settings** (bottom of the page): external-email chasing on/off, tone per seniority, people list, exclusions, and *Learn my tone*.
+- **Update Slack** (next to Refresh, shown once Slack is connected) is a quick Slack-only pass: no email, about a
+  third of the time. It keeps its own cursor, so the next full Refresh still picks up every email ask made in between.
+- **+ link** on a card attaches a document URL (Drive, Miro, Notion, Figma); the refresh also captures any document
+  link it sees in the thread. Links show as chips; bare URLs typed into a note become clickable too.
+- **+ note** on a card pre-fills the *Needs me* form with that person and ask, for a reminder to yourself about it.
+- **Day log** (collapsed section under the lists): what moved today, straight from the tracker. *Write it up* asks the
+  AI to read today's sent messages and write a short first-person note (Done / Moved / Waiting on) with a copy button
+  and a printable page. Nothing is sent.
+- **Roadmap** (collapsed section; needs Miro connected and a board + frame set in Settings): paste standup notes,
+  *Read these notes* turns them into rows with lane / column / owner, fix any mistakes, *Preview* shows what would be
+  added, then *Add to the roadmap* (press twice within 6 s) adds one sticky note per row inside the frame. It never
+  deletes, moves or edits anything on the board. *Read board* first so the lane and column choices match the frame.
+  The section ends with a live, view-only embed of the board opened on that frame (put the board *link* in Settings,
+  not just its name, to get it before the first read). Miro's plan sets a daily cap on tool calls (Free 100, Starter
+  500, Business 2,000); a read + preview + build is roughly 20-40 calls.
 
 ## 4. Rules the tool follows (worth telling whoever installs it)
 
@@ -136,11 +165,43 @@ openloops/        the app (python3 -m openloops.app)
   refresh.py      new asks + reply detection → state.json
   chase.py        draft a nudge for one loop
   voice.py        learn writing style → voice.json
+  daylog.py       today's digest + optional prose → state/daylog/<date>.json/.html
+  roadmap.py      Roadmap card: read board / parse notes / preview / build (Miro via the agent)
+  store.py        JSON helpers; update_state re-reads state.json before a job writes it
   index.html      the page
 tests/            qa.py and unit tests
 scripts/          weekday refresh (Task Scheduler / launchd) + macos-app.sh
 docs/             logo, screenshot, GitHub Pages, Mac Dock icon
 config.json       your settings (gitignored, next to the folder root)
 state.json        your list (gitignored)
+state/roadmap.json  staged roadmap rows (kept out of state.json on purpose)
+state/daylog/     one json + html per day
 state/logs/       one log per run
 ```
+
+## 7. Before you start: gotchas
+
+1. **Slack route.** Claude can reach Slack through the Slack *plugin* (`plugin:slack:slack`) or the *claude.ai Slack
+   connector*. Same tools, different tool prefix, and with the wrong one a refresh silently finds nothing. The
+   connection check detects which you have and stores it as `slack_source` in `config.json`; Settings shows the
+   detected route. If you switch, press *Check again* on the Home tab.
+2. **Miro (Roadmap card only).** Two routes, like Slack: the *claude.ai Miro connector* (add it at claude.ai →
+   Connectors, or *Open Claude* → `/mcp` → **Miro** → Authenticate) or the *Miro plugin*
+   (`claude plugin install miro@claude-plugins-official`, then `/mcp` → **miro** → Authenticate). The connection check
+   detects whichever is connected and stores it as `miro_source`; the plugin wins if both are. Each Miro login is tied
+   to one Miro team.
+3. **Second launch only opens the browser.** If Open Loops is already running, double-clicking the icon just opens the
+   page. After editing anything in `openloops/`, close the tab (the app stops a few seconds later) or run
+   `python -m openloops.app --stop`, then launch again. Developers: run a checkout side by side with the installed
+   copy using `npm run dev` (port 8766) and `npm run stop`; see "Running from a checkout" in README.md. If you reopen the page within those few seconds the app simply
+   carries on; a reload never stops it.
+4. **UTF-8 BOM.** PowerShell tends to write a BOM at the start of JSON files. Every reader in the app uses `utf-8-sig`
+   and the installer writes without a BOM; keep both if you add scripts.
+5. **OneDrive / Dropbox folders** lock files while syncing. Install to the default `%LOCALAPPDATA%\OpenLoops`, not a
+   synced folder.
+6. **Which model the jobs use.** Every job runs `claude -p` with `--model` and `--effort` from `model` and
+   `effort` in `config.json` (template: `sonnet` at `xhigh`; Settings → Your AI). Sonnet at xhigh or Opus at medium
+   both do the job. Leave either blank and the jobs inherit whatever `claude` defaults to on that computer, which
+   is usually the most expensive model available. Grok ignores both.
+7. **Jobs never clobber your clicks.** A refresh can run for minutes; anything you add or snooze meanwhile is kept
+   because every job re-reads `state.json` just before writing (`store.update_state`).

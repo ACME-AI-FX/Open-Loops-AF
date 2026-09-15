@@ -15,10 +15,18 @@ from .paths import ROOT
 WIN = sys.platform == "win32"
 _GROK_JOB_HOME = ROOT / "state" / "grok-home"
 
-# logical "service.tool" -> per-agent fully-qualified tool id
+# logical "service.tool" -> per-agent fully-qualified tool id.
+# Claude can reach Slack two ways: the Slack *plugin* (plugin:slack:slack, default) or the
+# claude.ai Slack *connector*. Same tools, different prefix; the wrong one makes a refresh
+# silently find nothing. doctor.py detects which is connected and stores config "slack_source".
+# Miro (Roadmap card) is the official Miro plugin; jobs allow the whole server ("miro.*").
+_CLAUDE_SLACK = {"plugin": "mcp__plugin_slack_slack__slack_{}", "connector": "mcp__claude_ai_Slack__slack_{}"}
+# Miro likewise: the Miro plugin (plugin:miro:miro) or the claude.ai Miro connector. Jobs allow the
+# whole server either way; doctor.py stores which one is connected as config "miro_source".
+_CLAUDE_MIRO = {"plugin": "mcp__plugin_miro_miro", "connector": "mcp__claude_ai_Miro"}
 _FMT = {
-    "claude": {"slack": "mcp__plugin_slack_slack__slack_{}", "gmail": "mcp__claude_ai_Gmail__{}"},
-    "grok":   {"slack": "slack__slack_{}",                   "gmail": "gmail__{}"},
+    "claude": {"slack": _CLAUDE_SLACK["plugin"], "gmail": "mcp__claude_ai_Gmail__{}", "miro": _CLAUDE_MIRO["plugin"]},
+    "grok":   {"slack": "slack__slack_{}",       "gmail": "gmail__{}",                "miro": "miro"},
 }
 
 # Grok CLI defaults to xhigh; Open Loops jobs are unattended JSON, not coding.
@@ -29,12 +37,24 @@ _GROK_DISALLOWED = (
 
 
 def _cfg():
-    f = ROOT / "config.json"
-    return json.loads(f.read_text(encoding="utf-8-sig")) if f.exists() else {}
+    from .store import load_cfg  # config.json over config.template.json, so "model" has its default
+    return load_cfg()
 
 
 def name():
     return (_cfg().get("agent") or "claude").strip().lower()
+
+
+def slack_source():
+    """Claude only: "plugin" (default) or "connector" - see _CLAUDE_SLACK."""
+    v = (_cfg().get("slack_source") or "plugin").strip().lower()
+    return v if v in _CLAUDE_SLACK else "plugin"
+
+
+def miro_source():
+    """Claude only: "plugin" (default) or "connector" - see _CLAUDE_MIRO."""
+    v = (_cfg().get("miro_source") or "plugin").strip().lower()
+    return v if v in _CLAUDE_MIRO else "plugin"
 
 
 def display_name():
@@ -89,8 +109,40 @@ def grok_job_env():
 
 
 def _qualify(tools):
-    fmt = _FMT.get(name()) or _FMT["claude"]
-    return [fmt[t.split(".", 1)[0]].format(t.split(".", 1)[1]) for t in tools]
+    fmt = dict(_FMT.get(name()) or _FMT["claude"])
+    if name() == "claude":
+        fmt["slack"] = _CLAUDE_SLACK[slack_source()]
+        fmt["miro"] = _CLAUDE_MIRO[miro_source()]
+    out = []
+    for t in tools:
+        svc, tool = t.split(".", 1)
+        pat = fmt[svc]
+        # "miro.*" -> the bare server id: Claude Code reads that as every tool on that server
+        out.append(pat.format(tool) if "{}" in pat else pat)
+    return list(dict.fromkeys(out))
+
+
+def model():
+    """config.json "model": the Claude model the jobs run on. An alias (sonnet, haiku, opus) or a
+    full id. Blank means whatever `claude` defaults to on this machine, which is usually the most
+    expensive model the user has - so the template says sonnet: plenty for reading threads and
+    writing JSON, at a fraction of the cost. Grok ignores it."""
+    return str(_cfg().get("model") or "").strip()
+
+
+def effort():
+    """config.json "effort": low | medium | high | xhigh | max, how hard the model thinks per turn.
+    Template: xhigh with sonnet (opus at medium is the other sensible pairing). Blank = CLI default."""
+    return str(_cfg().get("effort") or "").strip().lower()
+
+
+def claude_args(tools):
+    args = ["claude", "-p", "--output-format", "text", "--allowedTools", ",".join(_qualify(tools))]
+    if model():
+        args += ["--model", model()]
+    if effort():
+        args += ["--effort", effort()]
+    return args
 
 
 def run(prompt, tools):
@@ -108,7 +160,5 @@ def run(prompt, tools):
         return subprocess.run(args, capture_output=True, text=True,
                               encoding="utf-8", errors="replace", env=grok_job_env(), shell=WIN)
     # shell=True only on Windows, to resolve claude.cmd (npm shim) via PATH
-    return subprocess.run(["claude", "-p", "--output-format", "text",
-                           "--allowedTools", ",".join(_qualify(tools))],
-                          input=prompt, capture_output=True, text=True,
+    return subprocess.run(claude_args(tools), input=prompt, capture_output=True, text=True,
                           encoding="utf-8", errors="replace", shell=WIN)

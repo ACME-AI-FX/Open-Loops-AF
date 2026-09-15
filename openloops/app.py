@@ -9,24 +9,51 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 
 from .paths import PKG, ROOT
+from .store import load_cfg, norm_date, read_json, write_json
 STATE = ROOT / "state.json"
 INDEX = PKG / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
-EDITABLE = ("agent", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path")
+EDITABLE = ("agent", "model", "effort", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "standing_file", "pinned_links", "slack_source", "miro_source", "roadmap_board", "roadmap_frame")
 import os
-PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
+def _port_arg():
+    """`--port N` (or `--port=N`) beats OPENLOOPS_PORT beats 8765. `npm run dev` uses 8766 so a checkout never
+    collides with, or is mistaken for, the installed copy on 8765."""
+    a = sys.argv
+    for i, x in enumerate(a):
+        if x.startswith("--port="):
+            return int(x.split("=", 1)[1])
+        if x == "--port" and i + 1 < len(a):
+            return int(a[i + 1])
+    return int(os.environ.get("OPENLOOPS_PORT", "8765"))
+
+
+PREFERRED = _port_arg()
+PORT = PREFERRED
 WIN = sys.platform == "win32"
 MAC = sys.platform == "darwin"
 
-IDLE_EXIT_S = 3 * 3600  # server quits after 3h with no page activity
+IDLE_EXIT_S = 3 * 3600  # backstop: server quits after 3h with no page activity
 last_seen = time.time()
+# Pages that are open right now: page id -> last request time. Each page invents an id, sends it on
+# every request, and says goodbye (sendBeacon) when it closes. Once no page is left, the server quits
+# after a short grace (a reload is a goodbye followed by a hello within a second). Pages that vanish
+# without a goodbye (browser crash, laptop closed) are forgotten after PAGE_STALE_S.
+pages = {}
+bye_at = 0.0
+quit_requested = False
+PAGE_GRACE_S = 4
+PAGE_STALE_S = 15 * 60
 PEOPLEF = ROOT / "people_suggested.json"
+
+def cfg():
+    return load_cfg()
+
 
 def history_days():
     """How far back the AI reads (Settings > History). Drives the first-scan cursor and who's-who."""
     try:
-        return min(int(json.loads(CONFIG.read_text(encoding="utf-8-sig")).get("history_days") or 30), 365)
+        return min(int(cfg().get("history_days") or 30), 365)
     except Exception:
         return 30
 
@@ -46,18 +73,18 @@ if not STATE.exists():
 (ROOT / "state" / "logs").mkdir(parents=True, exist_ok=True)
 
 doctor_cache = {"at": 0, "result": None}
-jobs = {"refresh": {"running": False, "log": ""}, "chase": {"running": False, "log": ""}, "voice": {"running": False, "log": ""}, "people": {"running": False, "log": ""}, "standing": {"running": False, "log": ""}}
+JOB_MOD = {"refresh": "refresh", "chase": "chase", "voice": "voice", "people": "people", "standing": "close_standing",
+           "daylog": "daylog", "roadmap": "roadmap"}
+jobs = {k: {"running": False, "log": ""} for k in JOB_MOD}
 
 
 def load():
-    return json.loads(STATE.read_text(encoding="utf-8-sig"))
+    return read_json(STATE, {"cursor": None, "last_refresh": None, "loops": []})
 
 
 def save(s):
-    STATE.write_text(json.dumps(s, indent=2, ensure_ascii=False), encoding="utf-8")
+    write_json(STATE, s)
 
-
-JOB_MOD = {"refresh": "refresh", "chase": "chase", "voice": "voice", "people": "people", "standing": "close_standing"}
 
 def run_job(name, extra=None):
     if jobs[name]["running"]:
@@ -82,6 +109,9 @@ class H(BaseHTTPRequestHandler):
     def _json(self, obj, code=200):
         global last_seen
         last_seen = time.time()
+        pid = self.headers.get("X-OL-Page")
+        if pid:
+            pages[pid] = last_seen
         b = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -105,20 +135,89 @@ class H(BaseHTTPRequestHandler):
             if dirty:
                 save(s)
             s["loops"] = list(s.get("loops") or []) + vault_loops
-            self._json({"state": s, "jobs": jobs, "today": date.today().isoformat()})
+            self._json({"state": s, "jobs": jobs, "today": date.today().isoformat(),
+                        "pages": len(pages), "quitting": quit_requested})  # who is holding the server up
         elif self.path == "/api/config":
-            voice = json.loads(VOICEF.read_text(encoding="utf-8-sig")) if VOICEF.exists() else None
-            people = json.loads(PEOPLEF.read_text(encoding="utf-8-sig")) if PEOPLEF.exists() else None
-            self._json({"config": json.loads(CONFIG.read_text(encoding="utf-8-sig")), "voice": voice, "people_suggested": people})
+            self._json({"config": cfg(), "voice": read_json(VOICEF), "people_suggested": read_json(PEOPLEF)})
+        elif self.path.split("?")[0] == "/api/daylog":
+            from . import daylog
+            q = self._query()
+            self._json(daylog.status(q.get("date") or None))
+        elif self.path.split("?")[0] == "/api/daylog/page":
+            # served through the app: a file:// link from an http:// page is blocked by browsers
+            from . import daylog
+            q = self._query()
+            day = q.get("date") or date.today().isoformat()
+            pg = daylog.page_path(day)
+            if not pg.exists():
+                return self._json({"error": f"no day log for {day} yet - press Write it up"}, 404)
+            b = pg.read_bytes()
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(b)))
+            self.end_headers()
+            self.wfile.write(b)
+        elif self.path.split("?")[0] == "/api/standing":
+            from . import standing
+            self._json(standing.status(self._query().get("path") or None))
+        elif self.path == "/api/roadmap":
+            from . import roadmap
+            st, conf = roadmap.load(), roadmap.configured()
+            # the board may be known by link from Settings before it has ever been read
+            embed = roadmap.embed_url(st["board"].get("url") or conf["board"], st["board"].get("frame_id"))
+            self._json({"store": st, "configured": conf, "embed": embed,
+                        "miro": bool((doctor_cache.get("result") or {}).get("miro"))})
         else:
             self._json({"error": "not found"}, 404)
+
+    def _query(self):
+        from urllib.parse import parse_qs, urlsplit
+        return {k: v[0] for k, v in parse_qs(urlsplit(self.path).query).items()}
 
     def do_POST(self):
         global doctor_cache
         n = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(n) or b"{}")
+        if self.path == "/api/bye":  # a page closed (or reloaded: its successor says hello within a second)
+            global bye_at
+            pages.pop(str(body.get("page") or ""), None)
+            bye_at = time.time()
+            return self._json({"ok": True, "pages": len(pages)})
+        if self.path == "/api/quit":  # Settings button or `python -m openloops.app --stop`
+            global quit_requested
+            quit_requested = True
+            busy = [k for k, j in jobs.items() if j["running"]]
+            return self._json({"ok": True, "after_jobs": busy})
         if self.path == "/api/refresh":
-            return self._json({"started": run_job("refresh")})
+            return self._json({"started": run_job("refresh", ["--slack-only"] if body.get("slack_only") else None)})
+        if self.path == "/api/daylog":
+            return self._json({"started": run_job("daylog", ["--digest-only"] if body.get("digest_only") else None)})
+        if self.path == "/api/roadmap":
+            from . import roadmap
+            mode = body.get("mode")
+            if mode == "save":
+                # staging rows live in state/roadmap.json, never in state.json (refresh rewrites that)
+                roadmap.stage(rows=body.get("rows"), pasted=body.get("pasted"))
+                return self._json({"ok": True})
+            if mode not in roadmap.MODES:
+                return self._json({"ok": False, "error": "unknown mode"}, 400)
+            if not roadmap.configured()["ok"]:
+                return self._json({"ok": False, "error": "set the board and frame in Settings first"}, 400)
+            if mode == "parse" and body.get("pasted") is not None:
+                roadmap.stage(pasted=body.get("pasted"))
+            if mode == "build" and not body.get("confirm"):
+                # adds cards to a board other people share - the page arms this for a few seconds after a preview
+                return self._json({"ok": False, "error": "confirm required"}, 400)
+            return self._json({"started": run_job("roadmap", [mode] + (["--confirm"] if mode == "build" else []))})
+        if self.path == "/api/standing/create":
+            from . import standing
+            try:
+                p = standing.create_starter(body.get("path") or None)
+            except FileExistsError as e:
+                return self._json({"ok": False, "error": f"there is already a file at {e}"}, 400)
+            except OSError as e:
+                return self._json({"ok": False, "error": f"could not write there: {e}"}, 400)
+            return self._json({"ok": True, "path": str(p)})
         if self.path == "/api/doctor":
             import time as _t
             if body.get("force") or _t.time() - doctor_cache["at"] > 55:
@@ -154,30 +253,39 @@ class H(BaseHTTPRequestHandler):
                 r = subprocess.run(["bash", str(ROOT / "scripts" / "register-task.sh"), "--at", t],
                                    capture_output=True, text=True, encoding="utf-8", errors="replace")
             if r.returncode == 0:
-                cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
-                cfg["refresh_time"] = t
-                CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+                c = cfg()
+                c["refresh_time"] = t
+                write_json(CONFIG, c)
             return self._json({"ok": r.returncode == 0, "out": (r.stdout + r.stderr)[-500:]})
         if self.path == "/api/voice":
             return self._json({"started": run_job("voice")})
         if self.path == "/api/people":
             return self._json({"started": run_job("people")})
         if self.path == "/api/config":
-            cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
+            c = cfg()
+            if "pinned_links" in body:  # http(s) only, one entry per url, label trimmed
+                seen, clean = set(), []
+                for p in body.get("pinned_links") or []:
+                    u = str((p or {}).get("url") or "").strip()
+                    if not u.lower().startswith(("http://", "https://")) or u in seen:
+                        continue
+                    seen.add(u)
+                    clean.append({"url": u, "label": str((p or {}).get("label") or "").strip()[:60]})
+                body["pinned_links"] = clean
             for k, v in body.items():
                 if k in EDITABLE:
-                    cfg[k] = v
-            CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+                    c[k] = v
+            write_json(CONFIG, c)
             return self._json({"ok": True})
         if self.path == "/api/reset":
             # "Start over": back to the state a brand-new user sees, keeping only name/domains/tone settings.
             for f in (STATE, VOICEF, PEOPLEF):
                 if f.exists():
                     f.unlink()
-            cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
+            c = cfg()
             for k in ("people", "voice_sample_people", "slack_self_id"):
-                cfg[k] = {} if k == "people" else ([] if k == "voice_sample_people" else "")
-            CONFIG.write_text(json.dumps(cfg, indent=2, ensure_ascii=False), encoding="utf-8")
+                c[k] = {} if k == "people" else ([] if k == "voice_sample_people" else "")
+            write_json(CONFIG, c)
             STATE.write_text(fresh_state(), encoding="utf-8")
             doctor_cache = {"at": 0, "result": None}
             return self._json({"ok": True})
@@ -210,9 +318,8 @@ class H(BaseHTTPRequestHandler):
                 notes = (body.get("notes") or "").strip()[:2000]
                 if not ask:
                     return self._json({"error": "need something to do"}, 400)
-                cfg = json.loads(CONFIG.read_text(encoding="utf-8-sig"))
                 email = None
-                for name, p in (cfg.get("people") or {}).items():
+                for name, p in (cfg().get("people") or {}).items():
                     if name.lower() == owner.lower():
                         owner = name
                         email = (p or {}).get("email")
@@ -225,7 +332,7 @@ class H(BaseHTTPRequestHandler):
                     "channel": "note", "thread": None, "link": None,
                     "asked_at": now.isoformat(timespec="minutes"),
                     "status": "needs_me", "inbound": True, "manual": True,
-                    "notes": notes, "last_reply_at": None, "reply_snippet": None,
+                    "notes": notes, "links": [], "last_reply_at": None, "reply_snippet": None,
                     "chases": 0, "snooze_until": None,
                 })
                 save(s)
@@ -240,7 +347,10 @@ class H(BaseHTTPRequestHandler):
                         lp["status"] = "needs_me" if lp.get("channel") == "note" or lp.get("manual") else "waiting"
                         lp["snooze_until"] = None
                     elif act == "snooze":
-                        lp["snooze_until"] = body["until"]
+                        try:
+                            lp["snooze_until"] = norm_date(body.get("until"))
+                        except ValueError as e:
+                            return self._json({"error": str(e)}, 400)
                     elif act == "unsnooze":
                         lp["snooze_until"] = None
                     elif act == "auto_off":
@@ -249,6 +359,15 @@ class H(BaseHTTPRequestHandler):
                         lp["auto_off"] = False
                     elif act == "note":
                         lp["notes"] = (body.get("notes") or "").strip()[:2000]
+                    elif act == "add_link":
+                        url = (body.get("url") or "").strip()
+                        if not url.startswith("http"):
+                            return self._json({"error": "link must start with http"}, 400)
+                        links = lp.setdefault("links", [])
+                        if not any(x.get("url") == url for x in links):
+                            links.append({"url": url, "label": (body.get("label") or "").strip()[:60]})
+                    elif act == "drop_link":
+                        lp["links"] = [x for x in lp.get("links") or [] if x.get("url") != body.get("url")]
             save(s)
             return self._json({"ok": True})
         self._json({"error": "not found"}, 404)
@@ -256,6 +375,7 @@ class H(BaseHTTPRequestHandler):
 
 def port_busy(port=None):
     with socket.socket() as sk:
+        sk.settimeout(0.3)  # loopback answers instantly when something listens; Windows takes ~2 s to give up otherwise
         return sk.connect_ex(("127.0.0.1", port or PORT)) == 0
 
 
@@ -284,7 +404,28 @@ def pick_port(start=None):
     raise SystemExit(f"Open Loops: no free port between {start} and {start + 19}; set OPENLOOPS_PORT")
 
 
+def stop_running():
+    """`python -m openloops.app --stop`: ask the running instance (if any) to quit. Exit 0 if one was told."""
+    import urllib.request
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(20) as ex:  # probe the whole range at once: closed ports take the full timeout each
+        busy = [p for p, b in zip(range(PORT, PORT + 20), ex.map(port_busy, range(PORT, PORT + 20))) if b]
+    for p in busy:
+        if already_running(p):
+            req = urllib.request.Request(f"http://127.0.0.1:{p}/api/quit", data=b"{}",
+                                         headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=5) as r:
+                out = json.loads(r.read() or b"{}")
+            after = out.get("after_jobs") or []
+            print(f"Open Loops on port {p}: stopping" + (f" once {', '.join(after)} finishes" if after else ""))
+            return 0
+    print("Open Loops is not running")
+    return 1
+
+
 if __name__ == "__main__":
+    if "--stop" in sys.argv:
+        sys.exit(stop_running())
     PORT, running = pick_port()
     url = f"http://localhost:{PORT}"
     def open_browser():
@@ -303,15 +444,22 @@ if __name__ == "__main__":
         sys.exit(0)
     srv = ThreadingHTTPServer(("127.0.0.1", PORT), H)
     print("Open Loops ->", url)
-    if str(PORT) != os.environ.get("OPENLOOPS_PORT", "8765"):
-        print(f"(preferred port was taken by another program; set OPENLOOPS_PORT to choose)")
+    if PORT != PREFERRED:
+        print(f"(port {PREFERRED} was taken by another program; use --port or OPENLOOPS_PORT to choose)")
     if "--no-browser" not in sys.argv:
         threading.Timer(1.0, open_browser).start()
 
     def reaper():
         while True:
-            time.sleep(60)
-            if time.time() - last_seen > IDLE_EXIT_S and not any(j["running"] for j in jobs.values()):
+            time.sleep(1)
+            now = time.time()
+            for pid, seen in list(pages.items()):
+                if now - seen > PAGE_STALE_S:
+                    pages.pop(pid, None)
+            if any(j["running"] for j in jobs.values()):
+                continue  # never pull the rug from under a refresh/chase; check again once it is done
+            no_pages = bye_at and not pages and now - bye_at > PAGE_GRACE_S and now - last_seen > PAGE_GRACE_S
+            if quit_requested or no_pages or now - last_seen > IDLE_EXIT_S:
                 srv.shutdown()
                 return
 
