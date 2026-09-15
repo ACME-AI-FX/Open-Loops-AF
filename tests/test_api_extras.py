@@ -153,6 +153,7 @@ try:
 
     # ---- page has the new controls
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
+    check("x.id==='self'&&x.ok" in html, "Update Slack is shown only when Slack is connected and the owner's id is known")
     for needle in ('id="uslack"', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
         check(needle in html, f"page has {needle}")
     say("ALL OK")

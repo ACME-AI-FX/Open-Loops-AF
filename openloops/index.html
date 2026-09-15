@@ -319,7 +319,8 @@ async function stageAuto(st){const t=$('#auto_title'),s=$('#auto_sub'),r=$('#aut
   else{t.textContent='4 · The first scan didn\'t finish';s.textContent='Details under "Last job output" below.';r.style.display=''}}}
 function retryStage(){const st=stage();kicked[st==='voice'?'voice':'scan']=false;tick()}
 
-const slackOk=()=>!!(DOC&&DOC.steps&&DOC.steps.some(x=>x.id==='slack'&&x.ok));
+// Update Slack needs Slack connected AND the owner's Slack id known (refresh --slack-only is SKIPPED without it)
+const slackOk=()=>!!(DOC&&DOC.steps&&DOC.steps.some(x=>x.id==='slack'&&x.ok)&&DOC.steps.some(x=>x.id==='self'&&x.ok));
 function paintButtons(st){const rb=$('#refresh');rb.disabled=st==='connect'||st==='checking'||running('refresh');rb.textContent=running('refresh')?'Refreshing…':'Refresh';rb.title=st==='connect'?'connect Slack first':'';
  const ub=$('#uslack');ub.style.display=st==='ready'&&slackOk()&&$('#page_home').style.display!=='none'?'':'none';ub.disabled=running('refresh');ub.textContent=running('refresh')?'Updating…':'Update Slack';
  const vb=$('#voicebtn');vb.disabled=!havePeople()||running('voice');vb.textContent=running('voice')?'Learning…':'Learn my tone';vb.title=havePeople()?'':'save Who\'s who first';
