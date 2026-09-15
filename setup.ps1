@@ -26,6 +26,13 @@ Write-Host "  ============================" -ForegroundColor Cyan
 Write-Host "   Open Loops - setup"        -ForegroundColor Cyan
 Write-Host "  ============================" -ForegroundColor Cyan
 
+# Validate before anything is installed or written: a bad time would otherwise be saved into config.json,
+# register-task.ps1 would fail, and every later run without -At would reuse the saved value.
+if ($At -notmatch '^(?:[01]\d|2[0-3]):[0-5]\d$') {
+    Write-Host "  Refresh time '$At' must be HH:MM, 24-hour (00:00 to 23:59), for example 09:15." -ForegroundColor Yellow
+    exit 1
+}
+
 # ---------- 1. Python ----------
 Say "Checking Python..."
 if (-not (Get-Command python -ErrorAction SilentlyContinue)) {
@@ -88,8 +95,8 @@ if (Test-Path $CfgFile) {
     if ($PSBoundParameters.ContainsKey('At')) {
         $cfg.refresh_time = $At   # keep config.json and the scheduled task in step (as Settings does)
         $cfg | ConvertTo-Json -Depth 6 | ForEach-Object { [IO.File]::WriteAllText($CfgFile, $_, (New-Object Text.UTF8Encoding $false)) }
-    } elseif ($cfg.refresh_time) {
-        $At = $cfg.refresh_time
+    } elseif ($cfg.refresh_time -match '^(?:[01]\d|2[0-3]):[0-5]\d$') {
+        $At = $cfg.refresh_time   # a hand-edited bad value falls back to the default rather than breaking the task
     }
 }
 if (-not (Test-Path $CfgFile)) {
