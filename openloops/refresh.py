@@ -165,7 +165,8 @@ def apply(s, out, slack_only, now):
     by_id = {l["id"]: l for l in s["loops"]}
     n_new = n_upd = 0
     for nl in out.get("new_loops", []) or []:
-        if not nl.get("id") or nl["id"] in by_id:
+        nl["id"] = re.sub(r"[^a-z0-9._-]+", "-", str(nl.get("id") or "").lower()).strip("-")[:80]  # ids land in markup and CSS selectors: slugs only
+        if not nl["id"] or nl["id"] in by_id:
             continue
         if slack_only and nl.get("channel") != "slack":
             continue  # belt and braces: the prompt says no email, the merge enforces it

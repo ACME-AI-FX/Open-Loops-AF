@@ -140,7 +140,7 @@ try:
     time.sleep(3)
     check(up() and p.poll() is None, "...and the server is still up 3 s later")
     r = subprocess.run([sys.executable, "-m", "openloops.app", "--stop", "--now"], cwd=tmp, env=env, capture_output=True, text=True)
-    check(r.returncode == 0 and "daylog cut short" in r.stdout, f"--stop --now reports the job it cut short (out: {r.stdout.strip()!r})")
+    check(r.returncode == 0 and "daylog cut short" in r.stdout, f"--stop --now reports the job it cut short (out: {r.stdout.strip()!r} err: {r.stderr.strip()[-400:]!r})")
     check(gone(p, 10), "server exits after --stop --now without waiting for the job")
 
     def alive(pid):

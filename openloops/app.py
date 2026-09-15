@@ -97,23 +97,35 @@ def kill_tree(p):
         else:
             import os, signal
             os.killpg(p.pid, signal.SIGTERM)
+            try:
+                p.wait(3)
+            except subprocess.TimeoutExpired:  # a child that shrugs off TERM
+                os.killpg(p.pid, signal.SIGKILL)
     except Exception:
-        pass
+        pass  # already gone, or never ours: nothing left to stop
 
 
 def run_job(name, extra=None):
     if jobs[name]["running"]:
         return False
-    jobs[name] = {"running": True, "log": ""}
     args = [sys.executable, "-m", f"openloops.{JOB_MOD[name]}", *(extra or [])]
-
-    def go():
+    try:  # started here, not in the thread: a job the page sees as running always has a process /api/quit can stop
         p = subprocess.Popen(args, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
                              encoding="utf-8", errors="replace", start_new_session=sys.platform != "win32")
-        procs[name] = p
-        out, err = p.communicate()
-        procs.pop(name, None)
-        jobs[name] = {"running": False, "log": (out + err)[-4000:], "rc": p.returncode}
+    except Exception as e:  # no interpreter, no permission: say so in the job log rather than hang as "running"
+        jobs[name] = {"running": False, "log": f"could not start {name}: {type(e).__name__}: {e}", "rc": -1}
+        return False
+    procs[name] = p
+    jobs[name] = {"running": True, "log": ""}
+
+    def go():
+        try:
+            out, err = p.communicate()
+            jobs[name] = {"running": False, "log": (out + err)[-4000:], "rc": p.returncode}
+        except Exception as e:
+            jobs[name] = {"running": False, "log": f"{name} broke off: {type(e).__name__}: {e}", "rc": -1}
+        finally:
+            procs.pop(name, None)
 
     threading.Thread(target=go, daemon=True).start()
     return True
@@ -216,11 +228,12 @@ class H(BaseHTTPRequestHandler):
             quit_requested = True
             busy = [k for k, j in jobs.items() if j["running"]]
             if body.get("now") and busy:  # `npm run dev` restarting a dev session: a half-done refresh is not worth waiting for
-                quit_now = True
                 for k in busy:
                     if k in procs:
                         kill_tree(procs[k])
-                return self._json({"ok": True, "after_jobs": [], "cut_short": busy})
+                self._json({"ok": True, "after_jobs": [], "cut_short": busy})
+                quit_now = True  # only once the answer is out: the reaper stops the server the moment it sees this
+                return
             return self._json({"ok": True, "after_jobs": busy})
         if self.path == "/api/refresh":
             return self._json({"started": run_job("refresh", ["--slack-only"] if body.get("slack_only") else None)})

@@ -66,6 +66,10 @@ const extra = process.argv.slice(3);   // `npm run dev -- --no-browser`, `npm ru
 const py = python();
 const scripts = {
   dev: async () => {
+    if (Number(DEV_PORT) === 8765) {
+      console.error("npm run dev cannot use port 8765: that is the installed copy's port (npm run prod). Unset OPENLOOPS_PORT.");
+      return 1;
+    }
     // A dev session is throwaway: stop the earlier one (and cut short any job it is running) so the page
     // you open is definitely this code. The installed copy on 8765 is a different port and is never touched.
     const r = spawnSync(py, ["-m", "openloops.app", "--stop", "--now", "--port", DEV_PORT], { cwd: ROOT, encoding: "utf-8" });

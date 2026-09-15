@@ -393,7 +393,7 @@ const CS_KEY='ol.settings.open';
 function cfgOpenSet(){try{return new Set(JSON.parse(localStorage.getItem(CS_KEY)||'[]'))}catch(e){return new Set()}}
 function cfgRemember(d){const s=cfgOpenSet();d.open?s.add(d.id):s.delete(d.id);try{localStorage.setItem(CS_KEY,JSON.stringify([...s]))}catch(e){}}
 function cfgRestore(){const s=cfgOpenSet();document.querySelectorAll('details.cfg').forEach(d=>{d.open=s.has(d.id)})}
-function cfgAll(open){document.querySelectorAll('details.cfg').forEach(d=>{d.open=open})}
+function cfgAll(open){document.querySelectorAll('#page_settings details.cfg').forEach(d=>{d.open=open})}
 function cfgShow(id){const d=document.getElementById(id);if(d&&!d.open)d.open=true;return d}
 function showTab(t,sec){$('#page_home').style.display=t==='home'?'':'none';$('#page_settings').style.display=t==='settings'?'':'none';
  $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');if(S&&DOC)paintButtons(stage());else{$('#refresh').style.display='none';$('#uslack').style.display='none'}
@@ -492,7 +492,7 @@ const ageRef=l=>l.status==='needs_me'?(l.last_reply_at||l.asked_at):(l.last_chas
 const ageCol=l=>{const w=workdays(ageRef(l));return w<2?'g':w<=4?'a':'r'};
 let SORT='date';try{SORT=localStorage.getItem('ol.sort')||'date'}catch(e){}
 function setSort(v){SORT=v;try{localStorage.setItem('ol.sort',v)}catch(e){}renderLists()}
-const byKey=(a,b)=>SORT==='priority'&&PRI[pri(a)]!==PRI[pri(b)]?PRI[pri(a)]-PRI[pri(b)]:a.asked_at<b.asked_at?-1:a.asked_at>b.asked_at?1:0;
+const byKey=(a,b)=>{if(SORT==='priority'&&PRI[pri(a)]!==PRI[pri(b)])return PRI[pri(a)]-PRI[pri(b)];const x=ageRef(a)||'',y=ageRef(b)||'';return x<y?-1:x>y?1:0};   // "oldest first" = the age the blocks show
 const PO_KEY='ol.person.open';let personOpen=new Set();try{personOpen=new Set(JSON.parse(localStorage.getItem(PO_KEY)||'[]'))}catch(e){}
 function togglePerson(key){personOpen.has(key)?personOpen.delete(key):personOpen.add(key);try{localStorage.setItem(PO_KEY,JSON.stringify([...personOpen]))}catch(e){}renderLists()}
 const personName=l=>l.owner||(l.channel==='vault'?'Your to-do file':'Notes to self');
@@ -502,7 +502,7 @@ function personRow(sec,name,ls){const key=sec+':'+name,open=personOpen.has(key),
  const one=ls.length===1,shown=ls.length>4?3:ls.length;
  const sum=one?`${esc(ls[0].ask)}${ls[0].theme?` <span class="pill">${esc(ls[0].theme)}</span>`:''}`
   :ls.slice(0,shown).map(l=>`<div class="ln">${l.theme?`<b>${esc(l.theme)}</b> · `:''}${esc(l.ask)}</div>`).join('')+(ls.length>shown?`<div class="ln sub">+${ls.length-shown} more</div>`:'');
- return `<div class="person${open?' open':''}" role="button" tabindex="0" aria-expanded="${open}" onclick="togglePerson('${k}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePerson('${k}')}">
+ return `<div class="person${open?' open':''}" role="button" tabindex="0" aria-expanded="${open}" data-key="${k}" onclick="togglePerson(this.dataset.key)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();togglePerson(this.dataset.key)}">
   <div class="who">${esc(name)}${hi?'<span class="bang" title="high priority">!</span>':''}</div>
   <div class="blocks">${ls.map(l=>`<span class="blk ${ageCol(l)}" title="${esc(l.ask.slice(0,80))} · ${workdays(ageRef(l))}wd"></span>`).join('')}</div>
   <div class="sum">${sum}</div>
@@ -733,7 +733,7 @@ async function loop(){clearTimeout(loopT);try{
   if(wasRunning&&!now){await loadCfg();await loadDaylog();await loadRm();finished()}   // a job just finished: pick up new people/voice/config/day log/roadmap, say what happened
   wasRunning=now;
   const st=stage();
-  if((st==='connect'||st==='checking'||st==='checkfail')&&Date.now()-docAt>60000)await doctor(false);
+  if((st==='connect'||st==='checking'||st==='checkfail'||docFails)&&Date.now()-docAt>60000)await doctor(false);   // docFails: the list is up on an older answer; keep trying once a minute
   await tick();banner('');
  }catch(e){banner('Something went wrong talking to the app: '+e.message+' — if it keeps happening, close this tab and open Open Loops again.')}
  const st=stage();loopT=setTimeout(loop,(J&&Object.values(J).some(j=>j.running))||st!=='ready'?4000:60000)}
