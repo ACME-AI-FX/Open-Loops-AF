@@ -115,7 +115,7 @@ try:
     check("vault-A6" not in ids and "vault-A7" in ids, "closed item leaves Needs me; others stay")
 
     html = (app / "openloops" / "index.html").read_text(encoding="utf-8")
-    check("closeVault(" in html and "How are you closing" in html and "close_ok" in html,
+    check("closeVault(" in html and "How are you closing" in html and "dlgOpen(" in html and "Mark done" in html,
           "Home tab has the compulsory close popup")
 finally:
     srv.terminate()

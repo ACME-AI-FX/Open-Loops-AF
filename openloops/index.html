@@ -7,13 +7,28 @@
 header{display:flex;align-items:center;gap:14px;padding:12px 24px;border-bottom:1px solid var(--line);background:var(--card);position:sticky;top:0;z-index:2}
 h1{font-size:18px;margin:0 6px 0 0}header .meta{color:var(--mut);font-size:12px;margin-left:auto}
 .tabs{display:flex;gap:2px}.tabs button{border:none;background:none;padding:6px 12px;border-radius:6px;color:var(--mut)}.tabs button.on{background:var(--bg);color:var(--ink);font-weight:600}
-button{font:inherit;padding:6px 12px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
-button.primary{background:var(--b);color:#fff;border-color:var(--b)}button:disabled{opacity:.5;cursor:wait}
-.chip{display:inline-block;font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--b);text-decoration:none;margin:3px 4px 0 0;max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;vertical-align:bottom}.chip b{color:var(--mut);cursor:pointer;margin-left:5px}
-.rmrow{display:grid;grid-template-columns:1.3fr 1fr 110px 130px 130px 112px 28px;gap:6px;padding:5px 0;border-top:1px solid var(--line);align-items:start}
+/* Fitts: every control is at least 36px tall; keyboard users always see where focus is */
+button{font:inherit;padding:6px 12px;min-height:36px;border:1px solid var(--line);border-radius:6px;background:var(--card);color:var(--ink);cursor:pointer}
+button.primary{background:var(--b);color:#fff;border-color:var(--b)}button.accent{border-color:var(--b);color:var(--b)}button:disabled{opacity:.5;cursor:wait}
+button.quiet{border-color:transparent;color:var(--mut)}button.quiet:hover{border-color:var(--line);color:var(--ink)}
+:focus-visible{outline:2px solid var(--b);outline-offset:2px}
+input,select,textarea{min-height:36px}textarea{min-height:0}
+.chip{display:inline-flex;align-items:center;font-size:11px;padding:0 0 0 8px;border-radius:10px;border:1px solid var(--line);color:var(--b);text-decoration:none;margin:3px 4px 0 0;max-width:260px;overflow:hidden;white-space:nowrap;vertical-align:bottom}.chip span{overflow:hidden;text-overflow:ellipsis}
+.chip button{min-height:0;height:22px;width:26px;padding:0;border:0;background:none;color:var(--mut);font-size:14px;line-height:1}.chip button:hover{color:var(--r)}
+/* toasts: every action is acknowledged, undo where it is cheap */
+#toasts{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);display:flex;flex-direction:column;gap:8px;z-index:30;max-width:min(560px,calc(100vw - 32px))}
+.toast{background:var(--ink);color:var(--bg);border-radius:8px;padding:10px 14px;font-size:13px;display:flex;gap:12px;align-items:center;box-shadow:0 6px 24px rgba(0,0,0,.25)}
+.toast.err{background:#7f1d1d;color:#fff}.toast button{min-height:28px;padding:2px 10px;background:transparent;color:inherit;border-color:currentColor;font-size:12px}
+/* one dialog for every "type something" moment: snooze, note, link, closing a vault item */
+dialog{border:1px solid var(--line);border-radius:10px;padding:0;background:var(--card);color:var(--ink);max-width:min(560px,calc(100vw - 32px));width:100%}
+dialog::backdrop{background:rgba(0,0,0,.45)}dialog .box{margin:0;border:0}dialog label{display:block;margin-top:10px;font-size:12px;color:var(--mut)}
+dialog input,dialog textarea{width:100%;margin-top:4px}dialog .quick{display:flex;gap:6px;flex-wrap:wrap;margin-top:8px}
+.card.busy{opacity:.5;pointer-events:none}
+@media(max-width:720px){.card{grid-template-columns:10px 1fr}.card>.acts{grid-column:1/-1;justify-content:flex-start}}
+.rmrow{display:grid;grid-template-columns:1.3fr 1fr 110px 130px 130px 112px 40px;gap:6px;padding:5px 0;border-top:1px solid var(--line);align-items:start}
 .rmrow input,.rmrow select,#rm_paste{font:inherit;font-size:12px;padding:4px 6px;border:1px solid var(--line);border-radius:5px;background:var(--bg);color:var(--ink);width:100%}
 .rmrow.rmhead{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;border-top:0}
-.rmrow button{padding:2px 7px;font-size:12px;color:var(--mut)}
+.rmrow button{padding:0;width:36px;font-size:14px;color:var(--mut)}
 pre.out{white-space:pre-wrap;font:13px/1.55 system-ui,Segoe UI,sans-serif;margin:8px 0 0;max-height:360px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px}
 details.sect{margin-top:16px}details.sect>summary{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);cursor:pointer}details.sect>summary span{letter-spacing:0;text-transform:none}
 main{max-width:1100px;margin:0 auto;padding:20px 24px}
@@ -23,7 +38,9 @@ h3{margin:4px 0 6px;font-size:14px}
 .box{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:14px 16px;margin-bottom:12px}
 .dot{width:10px;height:10px;border-radius:50%;margin-top:5px}.g{background:var(--g)}.a{background:var(--a)}.r{background:var(--r)}.b{background:var(--b)}
 .who{font-weight:600}.sub{color:var(--mut);font-size:12px;margin-top:3px}.sub a{color:var(--b);text-decoration:none}
-.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}.acts button{padding:4px 9px;font-size:12px}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;align-items:center}.acts button{padding:4px 10px;font-size:12px;white-space:nowrap}
+.acts details{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}.acts details>summary{list-style:none;display:inline-flex;align-items:center;min-height:36px;padding:0 8px;font-size:12px;color:var(--mut);cursor:pointer;border-radius:6px}.acts details>summary::-webkit-details-marker{display:none}.acts details[open]>summary{color:var(--ink)}
+.acts details>div{display:inline-flex;gap:6px;flex-wrap:wrap}
 .snoozed{opacity:.55}.empty{color:var(--mut);padding:10px 0}
 pre.log{background:var(--card);border:1px solid var(--line);border-radius:8px;padding:10px;font-size:11px;white-space:pre-wrap;max-height:180px;overflow:auto;color:var(--mut)}
 .pill{font-size:11px;padding:1px 7px;border-radius:10px;border:1px solid var(--line);color:var(--mut)}
@@ -33,8 +50,7 @@ details summary{cursor:pointer;color:var(--mut);font-size:12px}
 .steps span.done{border-color:var(--g);color:var(--g)}.steps span.now{background:var(--b);border-color:var(--b);color:#fff}
 input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--b);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}
-#close_modal{display:none;position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:20;padding:24px}
-#close_modal.on{display:block}
+#savebar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);margin:8px -24px 0;padding:10px 24px;display:flex;gap:10px;align-items:center;z-index:2}
 </style></head><body>
 <header><h1>Open Loops</h1>
 <div class="tabs"><button id="tab_home" class="on" onclick="showTab('home')">Home</button><button id="tab_settings" onclick="showTab('settings')">⚙ Settings</button></div>
@@ -134,30 +150,22 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
  </details>
  <details style="margin-top:14px"><summary>Last job output</summary><pre id="log" class="log"></pre></details>
 </div>
-<div id="close_modal">
- <div class="box" style="max-width:560px;margin:12vh auto">
-  <h3 id="close_title">How are you closing this?</h3>
-  <div class="sub" id="close_sub" style="margin-bottom:8px"></div>
-  <textarea id="close_text" rows="5" style="width:100%" placeholder="What did you do? Name any other standing items this changes (A7, A8…)." oninput="$('#close_ok').disabled=!this.value.trim()"></textarea>
-  <div style="margin-top:10px;display:flex;gap:8px">
-   <button class="primary" id="close_ok" disabled onclick="submitClose()">Mark done</button>
-   <button onclick="hideClose()">Cancel</button>
+<!-- one dialog for snooze / note / link / closing a vault item: same look, Esc cancels, Enter submits, input kept on error -->
+<dialog id="dlg"><form method="dialog" class="box" style="padding:16px 18px" onsubmit="return dlgSubmit(event)">
+  <h3 id="dlg_title"></h3>
+  <div class="sub" id="dlg_sub"></div>
+  <div id="dlg_fields"></div>
+  <div class="sub" id="dlg_err" style="color:var(--r);margin-top:6px"></div>
+  <div style="margin-top:14px;display:flex;gap:8px">
+   <button class="primary" id="dlg_ok" type="submit">OK</button>
+   <button type="button" onclick="dlgClose()">Cancel</button>
   </div>
- </div>
-</div>
+</form></dialog>
+<div id="toasts" aria-live="polite"></div>
 
 <!-- ================= SETTINGS ================= -->
-<div id="page_settings" style="display:none">
- <div class="box">
-  <h3>Quit</h3>
-  <div class="sub">Closing this tab stops the app by itself a few seconds later (after any running job). This button does the same without closing the tab. To start again, double-click the Open Loops icon.</div>
-  <button id="quitbtn" onclick="quitApp()" style="margin-top:6px">Quit Open Loops</button>
- </div>
- <div class="box">
-  <h3>ClaudeCloud vault</h3>
-  <div class="sub">Folder with <code>02-Research/standing-items.md</code>. Blank = <code>~/ClaudeCloud</code>. Open Loops re-reads that file every time the page refreshes (about once a minute) — it does not watch GitHub. New or rewritten lines show a <b>new</b> / <b>updated</b> mark for the rest of the day. Done asks how you closed them and writes that into the vault.</div>
-  <input id="cfg_vault" style="margin:6px 0 0;width:100%" placeholder="/Users/you/ClaudeCloud">
- </div>
+<div id="page_settings" style="display:none" oninput="cfgDirty()" onchange="cfgDirty()">
+ <h2 style="margin-top:0">You</h2>
  <div class="box">
   <h3>Your name</h3>
   <div class="sub">First name, as you'd sign a message.</div>
@@ -179,17 +187,17 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   </div>
  </div>
  <div class="box">
+  <h3>Your voice</h3>
+  <div class="sub">Reads how you actually write to each person (your own Slack DMs + sent email, read-only) and stores a per-person style note with real examples, so chases sound like you. Runs automatically after Who's who; re-run whenever you change people.</div>
+  <div style="margin:8px 0"><button id="voicebtn" onclick="learnVoice()">Learn my tone</button> <span class="sub" id="voice_meta"></span></div>
+  <div id="voice"></div>
+ </div>
+ <div class="box">
   <h3>History</h3>
   <div class="sub">How far back the AI reads when building context — the "who's who" people scan (both people you write to and real people who write to you), and the very first loop scan. Longer = fuller picture, slower scans. To re-scan with a new window: press "Pick from who I message most" below, or Start over for a full rebuild.</div>
   <select id="cfg_history" style="margin:6px 0 0;font:inherit;padding:4px"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="60">Last 60 days</option><option value="90">Last 90 days</option><option value="180">Last 180 days</option></select>
  </div>
- <div class="box">
-  <h3>Daily refresh time</h3>
-  <div class="sub">Weekdays, only while you're logged in. Runs the refresh, then the timer (if enabled). Pick something before you'd normally open the page.</div>
-  <div style="margin:6px 0 0;display:flex;gap:8px;align-items:center">
-   <input id="cfg_time" type="time" style="font:inherit;padding:4px"> <button onclick="saveTime()">Apply</button> <span class="sub" id="time_msg"></span>
-  </div>
- </div>
+ <h2>Chasing</h2>
  <div class="box">
   <h3>Chasing</h3>
   <label><input type="checkbox" id="cfg_ext"> Chase <b>external</b> email contacts too (vendors, lawyers). Off = internal people only.</label>
@@ -222,30 +230,43 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <details style="margin-top:8px"><summary>Advanced: edit as JSON</summary><textarea id="cfg_people" rows="8" style="width:100%;font:12px/1.4 ui-monospace,Consolas,monospace;margin-top:6px"></textarea></details>
  </div>
  <div class="box">
-  <h3>Roadmap (Miro)</h3>
-  <div class="sub">The Roadmap section on Home adds cards to a frame on a Miro board. Board = its name or link; frame = the title of the roadmap frame on it. Needs Miro connected in Claude — the connection checklist on Home says how.</div>
-  <input id="cfg_rm_board" style="margin:6px 0 0;width:100%" placeholder="board name or https://miro.com/app/board/…">
-  <input id="cfg_rm_frame" style="margin:6px 0 0;width:100%" placeholder="frame title, e.g. Roadmap Sep 2026">
- </div>
- <div class="box">
   <h3>Exclusions</h3>
   <div class="sub">People / topics the refresh should never turn into loops (comma-separated).</div>
   <input id="cfg_excl_people" style="width:100%;margin-top:6px" placeholder="people">
   <input id="cfg_excl_topics" style="width:100%;margin-top:6px" placeholder="topics">
  </div>
- <div style="margin:4px 0 16px;display:flex;gap:8px;align-items:center">
-  <button class="primary" onclick="saveCfg()">Save settings</button><span class="sub" id="cfg_msg"></span>
+ <h2>Connections</h2>
+ <div class="box">
+  <h3>Daily refresh time</h3>
+  <div class="sub">Weekdays, only while you're logged in. Runs the refresh, then the timer (if enabled). Pick something before you'd normally open the page. Applies on its own; no need to press Save.</div>
+  <div style="margin:6px 0 0;display:flex;gap:8px;align-items:center">
+   <input id="cfg_time" type="time" style="font:inherit;padding:4px"> <button onclick="saveTime()">Apply</button> <span class="sub" id="time_msg"></span>
+  </div>
  </div>
  <div class="box">
-  <h3>Start over</h3>
-  <div class="sub">Wipes the list, the people picks and the learned tone, and takes you back to step 1 as a brand-new user would see it. Keeps your name, domains and tone settings. Slack/Gmail stay connected.</div>
-  <div style="margin-top:8px"><button onclick="startOver()">Start over</button></div>
+  <h3>ClaudeCloud vault</h3>
+  <div class="sub">Folder with <code>02-Research/standing-items.md</code>. Blank = <code>~/ClaudeCloud</code>. Open Loops re-reads that file every time the page refreshes (about once a minute) — it does not watch GitHub. New or rewritten lines show a <b>new</b> / <b>updated</b> mark for the rest of the day. Done asks how you closed them and writes that into the vault.</div>
+  <input id="cfg_vault" style="margin:6px 0 0;width:100%" placeholder="/Users/you/ClaudeCloud">
  </div>
  <div class="box">
-  <h3>Your voice</h3>
-  <div class="sub">Reads how you actually write to each person (your own Slack DMs + sent email, read-only) and stores a per-person style note with real examples, so chases sound like you. Runs automatically after Who's who; re-run whenever you change people.</div>
-  <div style="margin:8px 0"><button id="voicebtn" onclick="learnVoice()">Learn my tone</button> <span class="sub" id="voice_meta"></span></div>
-  <div id="voice"></div>
+  <h3>Roadmap (Miro)</h3>
+  <div class="sub">The Roadmap section on Home adds cards to a frame on a Miro board. Board = its name or link; frame = the title of the roadmap frame on it. Needs Miro connected in Claude — the connection checklist on Home says how.</div>
+  <input id="cfg_rm_board" style="margin:6px 0 0;width:100%" placeholder="board name or https://miro.com/app/board/…">
+  <input id="cfg_rm_frame" style="margin:6px 0 0;width:100%" placeholder="frame title, e.g. Roadmap Sep 2026">
+ </div>
+ <h2>App</h2>
+ <div class="box">
+  <h3>Quit</h3>
+  <div class="sub">Closing this tab stops the app by itself a few seconds later (after any running job). This button does the same without closing the tab. To start again, double-click the Open Loops icon.</div>
+  <button id="quitbtn" onclick="quitApp()" style="margin-top:6px">Quit Open Loops</button>
+ </div>
+ <div class="box" style="border-color:var(--r)">
+  <h3 style="color:var(--r)">Start over</h3>
+  <div class="sub">Wipes the list, the people picks and the learned tone, and takes you back to step 1 as a brand-new user would see it. Keeps your name, domains and tone settings. Slack/Gmail stay connected. This cannot be undone.</div>
+  <div style="margin-top:8px"><button onclick="startOver()" style="border-color:var(--r);color:var(--r)">Start over…</button></div>
+ </div>
+ <div id="savebar">
+  <button class="primary" id="cfg_save" onclick="saveCfg()">Save settings</button><span class="sub" id="cfg_msg"></span>
  </div>
 </div>
 </main>
@@ -261,6 +282,21 @@ const linkify=s=>esc(s).replace(/https?:\/\/[^\s<]+/g,u=>`<a href="${u}" target=
 const PAGE=Math.random().toString(36).slice(2)+Date.now().toString(36);let stopped=false;
 const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json','X-OL-Page':PAGE},body:JSON.stringify(b)}:{headers:{'X-OL-Page':PAGE}});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
 function banner(msg){const b=$('#banner');if(!msg){b.style.display='none';return}b.style.display='';b.textContent=msg}
+// ---------- feedback: a toast for every action (Doherty), with Undo where it is cheap (Postel) ----------
+function toast(msg,opt){opt=opt||{};const t=document.createElement('div');t.className='toast'+(opt.err?' err':'');t.textContent=msg;
+ if(opt.undo){const b=document.createElement('button');b.textContent=opt.undoLabel||'Undo';b.onclick=async()=>{t.remove();try{await opt.undo()}catch(e){toast('Undo failed: '+e.message,{err:true})}};t.appendChild(b)}
+ $('#toasts').appendChild(t);setTimeout(()=>t.remove(),opt.ms||(opt.undo?8000:4000));return t}
+// ---------- one dialog for snooze / note / link / vault close ----------
+let dlgOk=null;
+function dlgOpen(o){$('#dlg_title').textContent=o.title||'';$('#dlg_sub').textContent=o.sub||'';$('#dlg_err').textContent='';$('#dlg_ok').textContent=o.ok||'OK';$('#dlg_ok').disabled=false;
+ $('#dlg_fields').innerHTML=(o.fields||[]).map(f=>`<label>${esc(f.label||'')}${f.type==='textarea'?`<textarea id="dlg_${f.id}" rows="${f.rows||4}" placeholder="${esc(f.placeholder||'')}">${esc(f.value||'')}</textarea>`:`<input id="dlg_${f.id}" type="${f.type||'text'}" value="${esc(f.value||'')}" placeholder="${esc(f.placeholder||'')}" autocomplete="off">`}</label>`).join('')+(o.html||'');
+ dlgOk=o.onOk;$('#dlg').showModal();const first=$('#dlg_fields').querySelector('input,textarea');if(first)first.focus()}
+function dlgClose(){dlgOk=null;$('#dlg').close()}
+function dlgVal(id){const e=$('#dlg_'+id);return e?e.value.trim():''}
+async function dlgSubmit(ev){ev.preventDefault();if(!dlgOk)return false;const b=$('#dlg_ok');b.disabled=true;$('#dlg_err').textContent='';
+ try{const r=await dlgOk();if(r!==false)dlgClose()}catch(e){$('#dlg_err').textContent=e.message.replace(/^.*-> \d+ /,'')}b.disabled=false;return false}
+// Enter in a single-line dialog field submits; textarea keeps Enter for new lines
+document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='INPUT'&&e.target.closest('#dlg')){e.preventDefault();$('#dlg_ok').click()}});
 
 // ---------- tabs ----------
 let formPainted=false;
@@ -290,7 +326,7 @@ const kicked={};   // which automatic jobs this page load has already started (s
 const ORDER=[['connect','Connect'],['people',"Who's who"],['voice','Learn tone'],['scan','First scan'],['ready','Ready']];
 async function tick(){
  const st=stage();
- $('#steps').innerHTML=st==='ready'?'':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===st)>i?'done':k===st?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===st)>i?' ✓':''}</span>`).join('');
+ $('#steps').innerHTML=st==='ready'?'':st==='checking'?'<span class="sub"><span class="spin"></span>Checking your connections…</span>':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===st)>i?'done':k===st?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===st)>i?' ✓':''}</span>`).join('');
  for(const k of ['connect','people','auto'])$('#st_'+k).style.display='none';
  $('#lists').style.display=st==='ready'?'':'none';
  if(st==='connect')paintConnect();
@@ -353,14 +389,20 @@ function card(l,dim){const w=workdays(l.asked_at);const sn=l.snooze_until&&l.sno
  const vault=l.channel==='vault';
  const note=l.channel==='note'||(l.manual&&!vault);
  return `<div class="card ${dim||sn?'snoozed':''}"><div class="dot ${col(l)}"></div>
- <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)">✎ chase drafted ${fmt(l.last_chase_at)}</b> — check Slack/Gmail drafts before drafting again`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
- <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'ClaudeCloud / 02-Research/standing-items.md')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${linkify(l.notes)}`:''}${(l.links||[]).length?`<br>${l.links.map(x=>`<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.url)}">${esc(x.label||host(x.url))}<b onclick="event.preventDefault();dropLink('${esc(l.id)}','${esc(x.url)}')" title="remove link">×</b></a>`).join('')}`:''}</div></div>
- <div class="acts">${l.status!=='done'?(vault?`<button onclick="closeVault('${esc(l.id)}')">done</button>`:`<button onclick="act('${esc(l.id)}','done')">done</button>`):`<button onclick="act('${esc(l.id)}','reopen')">reopen</button>`}
- ${l.status==='waiting'&&!note&&!vault?`<button onclick="chase('${esc(l.id)}')" ${running('chase')?'disabled':''}>${willSend(l)?'send chase':'draft chase'}</button>`:''}
- ${vault?'':sn?`<button onclick="act('${esc(l.id)}','unsnooze')">unsnooze</button>`:l.status!=='done'?`<button onclick="snooze('${esc(l.id)}')">snooze</button>`:''}
- ${vault||l.status==='done'?'':`<button onclick="editNote('${esc(l.id)}')">${l.notes?'edit note':'note'}</button><button onclick="addLink('${esc(l.id)}')" title="attach a document link (Drive, Miro, Notion…)">+ link</button>`}
- ${!note&&!vault&&l.status!=='done'?`<button onclick="noteFor('${esc(l.id)}')" title="add a reminder for yourself about this">+ note</button>`:''}
- ${l.status==='waiting'&&!note&&!vault&&C&&C.auto_chase&&C.auto_chase.enabled?(l.auto_off?`<button onclick="act('${esc(l.id)}','auto_on')" title="auto-chase is off for this loop">auto: off</button>`:`<button onclick="act('${esc(l.id)}','auto_off')" title="stop the timer from ${willSend(l)?'sending':'drafting'} chases for this loop" style="border-color:var(--g)">auto: on</button>`):''}</div></div>`}
+ <div><div class="who">${esc(l.owner || (note?'note':''))}</div><div class="sub">${vault?esc(l.vault_id||l.notes||''):note?(l.owner?'note':''):`${esc(l.channel)} · ${w}wd`}${l.chases?` · chased ${l.chases}x`:''}${l.last_chase_at?(l.last_chase_mode==='send'?`<br><b style="color:var(--g)">➤ chase sent ${fmt(l.last_chase_at)}</b>`:`<br><b style="color:var(--a)" title="a draft is waiting in Slack/Gmail - check it before drafting again">✎ chase drafted ${fmt(l.last_chase_at)}</b>`):''}${sn?` · snoozed → ${esc(l.snooze_until)}`:''}${vault&&l.vault_flag?` · <span class="pill">${esc(l.vault_flag)}</span>`:''}</div></div>
+ <div><div>${esc(l.ask)}</div><div class="sub">${vault?`from ${esc(l.source||'ClaudeCloud / 02-Research/standing-items.md')} · added ${fmt(l.asked_at)}${l.vault_changed_at?` · wording changed ${fmt(l.vault_changed_at)}`:''}`:note?`added ${fmt(l.asked_at)}`:`asked ${fmt(l.asked_at)}`}${l.last_reply_at?` · they: <i>"${esc((l.reply_snippet||'').slice(0,100))}"</i> ${fmt(l.last_reply_at)}`:vault||note?'':` · no reply yet`}${l.link?` · <a href="${esc(l.link)}" target="_blank">open</a>`:''}${!vault&&l.notes?`<br>${linkify(l.notes)}`:''}${(l.links||[]).length?`<br>${l.links.map(x=>`<a class="chip" href="${esc(x.url)}" target="_blank" rel="noopener" title="${esc(x.url)}"><span>${esc(x.label||host(x.url))}</span><button type="button" aria-label="remove link" title="remove link" onclick="event.preventDefault();dropLink('${esc(l.id)}','${esc(x.url)}')">×</button></a>`).join('')}`:''}</div></div>
+ <div class="acts" data-id="${esc(l.id)}">${(()=>{
+   // Von Restorff: one primary per card - chase when waiting on them, done when it needs you; everything else quiet
+   const id=esc(l.id),chaseable=l.status==='waiting'&&!note&&!vault;
+   const done=l.status!=='done'?(vault?`<button class="${chaseable?'':'accent'}" onclick="closeVault('${id}')">done</button>`:`<button class="${chaseable?'':'accent'}" onclick="act('${id}','done')">done</button>`):`<button onclick="act('${id}','reopen')">reopen</button>`;
+   const chaseB=chaseable?`<button class="accent" onclick="chase('${id}')" ${running('chase')?'disabled':''}>${willSend(l)?'send chase':'draft chase'}</button>`:'';
+   const snoozeB=vault?'':sn?`<button class="quiet" onclick="act('${id}','unsnooze')">unsnooze</button>`:l.status!=='done'?`<button class="quiet" onclick="snooze('${id}')">snooze</button>`:'';
+   const more=[];
+   if(!vault&&l.status!=='done')more.push(`<button class="quiet" onclick="editNote('${id}')">${l.notes?'edit note':'note'}</button>`,`<button class="quiet" onclick="addLink('${id}')" title="attach a document link (Drive, Miro, Notion…)">+ link</button>`);
+   if(!note&&!vault&&l.status!=='done')more.push(`<button class="quiet" onclick="noteFor('${id}')" title="add a reminder for yourself about this">+ note</button>`);
+   if(chaseable&&C&&C.auto_chase&&C.auto_chase.enabled)more.push(l.auto_off?`<button class="quiet" onclick="act('${id}','auto_on')" title="auto-chase is off for this loop">auto: off</button>`:`<button class="quiet" onclick="act('${id}','auto_off')" title="stop the timer from ${willSend(l)?'sending':'drafting'} chases for this loop" style="color:var(--g)">auto: on</button>`);
+   return chaseB+done+snoozeB+(more.length?`<details${openMore[l.id]?' open':''} ontoggle="openMore['${id}']=this.open"><summary>more ▾</summary><div>${more.join('')}</div></details>`:'')})()}</div></div>`}
+const openMore={};   // which cards have "more" open, so a re-render does not snap it shut under your cursor
 function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=='done'&&!(l.snooze_until&&l.snooze_until>TODAY);
  const needs=L.filter(l=>l.status==='needs_me'&&live(l)),wait=L.filter(l=>l.status==='waiting'&&live(l)).sort((a,b)=>a.asked_at<b.asked_at?-1:1),rest=L.filter(l=>!live(l));
  $('#needs').innerHTML=needs.map(l=>card(l)).join('')||'<div class="empty">nothing waiting on you</div>';
@@ -368,28 +410,45 @@ function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=
  $('#rest').innerHTML=rest.map(l=>card(l,true)).join('');
  $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`;
  const dl=$('#need_people');if(dl)dl.innerHTML=Object.keys((C&&C.people)||{}).sort().map(n=>`<option value="${esc(n)}">`).join('')}
-async function act(id,action,extra){await api('/api/action',Object.assign({id,action},extra||{}));await loadState();renderLists()}
-function snooze(id){const d=prompt('Snooze until (YYYY-MM-DD)',new Date(Date.now()+2*864e5).toISOString().slice(0,10));if(d)act(id,'snooze',{until:d})}
-function editNote(id){const l=S.loops.find(x=>x.id===id);if(!l)return;const n=prompt('Note',l.notes||'');if(n!==null)act(id,'note',{notes:n})}
-async function addLink(id){const u=(prompt('Link (https://…)')||'').trim();if(!u)return;const label=(prompt('Label (optional)','')||'').trim();
- try{await act(id,'add_link',{url:u,label})}catch(e){banner('Could not add that link: '+e.message)}}
+const who=l=>l?((l.owner?l.owner+' — ':'')+(l.ask||'')).slice(0,60):'';
+// every card action: card dims at once (pending), then a toast says what happened; done/snooze/reopen offer Undo
+const UNDO={done:'reopen',reopen:'done',snooze:'unsnooze',unsnooze:'snooze',auto_off:'auto_on',auto_on:'auto_off'};
+const SAID={done:'Marked done',reopen:'Reopened',snooze:'Snoozed',unsnooze:'Unsnoozed',note:'Note saved',add_link:'Link added',drop_link:'Link removed',auto_off:'Auto-chase off for',auto_on:'Auto-chase on for'};
+async function act(id,action,extra,quiet){const l=S&&S.loops.find(x=>x.id===id);const card=document.querySelector(`.acts[data-id="${CSS.escape(id)}"]`);if(card)card.closest('.card').classList.add('busy');
+ try{await api('/api/action',Object.assign({id,action},extra||{}))}
+ catch(e){if(card)card.closest('.card').classList.remove('busy');toast((SAID[action]||action)+' failed: '+e.message.replace(/^.*-> \d+ /,''),{err:true});throw e}
+ await loadState();renderLists();
+ if(quiet)return;const undoTo=UNDO[action];
+ if(undoTo)toast(`${SAID[action]}: ${who(l)}${action==='snooze'?' until '+extra.until:''}`,{undo:()=>act(id,undoTo,undoTo==='snooze'?{until:l.snooze_until||extra.until}:null,true)});
+ else toast(`${SAID[action]||action}: ${who(l)}`)}
+function snooze(id){const l=S.loops.find(x=>x.id===id);if(!l)return;const day=n=>{const d=new Date();d.setDate(d.getDate()+n);return d.toISOString().slice(0,10)};
+ const nextMon=()=>{const d=new Date();d.setDate(d.getDate()+((8-d.getDay())%7||7));return d.toISOString().slice(0,10)};
+ dlgOpen({title:'Snooze',sub:who(l),ok:'Snooze',fields:[{id:'until',label:'Until',type:'date',value:day(2)}],
+  html:`<div class="quick"><button type="button" onclick="$('#dlg_until').value='${day(1)}'">tomorrow</button><button type="button" onclick="$('#dlg_until').value='${day(2)}'">2 days</button><button type="button" onclick="$('#dlg_until').value='${nextMon()}'">next Monday</button><button type="button" onclick="$('#dlg_until').value='${day(7)}'">a week</button></div>`,
+  onOk:async()=>{const d=dlgVal('until');if(!d)throw new Error('pick a date');await act(id,'snooze',{until:d})}})}
+function editNote(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
+ dlgOpen({title:l.notes?'Edit note':'Add a note',sub:who(l),ok:'Save',fields:[{id:'notes',label:'Note (links become clickable)',type:'textarea',value:l.notes||'',rows:4}],onOk:()=>act(id,'note',{notes:dlgVal('notes')})})}
+function addLink(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
+ dlgOpen({title:'Attach a link',sub:who(l),ok:'Add link',fields:[{id:'url',label:'Link (Drive, Miro, Notion, Figma…)',type:'url',placeholder:'https://…'},{id:'label',label:'Label (optional)',placeholder:'e.g. brief v2'}],
+  onOk:async()=>{const u=dlgVal('url');if(!/^https?:\/\//i.test(u))throw new Error('the link must start with http:// or https://');await act(id,'add_link',{url:u,label:dlgVal('label')})}})}
 function dropLink(id,url){act(id,'drop_link',{url})}
 function noteFor(id){const l=S.loops.find(x=>x.id===id);if(!l)return;$('#need_who').value=l.owner||'';$('#need_ask').value='';$('#need_notes').value='re: '+(l.ask||'');
  $('#add_need').scrollIntoView({behavior:'smooth',block:'center'});$('#need_ask').focus()}
-let closingId=null;
-function closeVault(id){const l=S.loops.find(x=>x.id===id);if(!l)return;closingId=id;
- $('#close_title').textContent='How are you closing '+(l.vault_id||id)+'?';
- $('#close_sub').textContent=(l.owner?l.owner+' — ':'')+l.ask;
- $('#close_text').value='';$('#close_ok').disabled=true;$('#close_modal').classList.add('on');$('#close_text').focus()}
-function hideClose(){closingId=null;$('#close_modal').classList.remove('on')}
-async function submitClose(){const closure=$('#close_text').value.trim();if(!closingId||!closure)return;
- const id=closingId;try{await api('/api/action',{id,action:'done',closure});hideClose();if(J)J.standing={running:true};await loadState();renderLists()}
- catch(e){banner('Could not close that: '+e.message)}}
+function closeVault(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
+ dlgOpen({title:'How are you closing '+(l.vault_id||id)+'?',sub:(l.owner?l.owner+' — ':'')+l.ask,ok:'Mark done',
+  fields:[{id:'closure',label:'What did you do? Name any other standing items this changes (A7, A8…).',type:'textarea',rows:5}],
+  onOk:async()=>{const closure=dlgVal('closure');if(!closure)throw new Error('say how you closed it - this goes into the vault');
+   await api('/api/action',{id,action:'done',closure});if(J)J.standing={running:true};await loadState();renderLists();toast('Marked done and written to the vault: '+(l.vault_id||id))}})}
 async function addNeed(){const owner=$('#need_who').value.trim(),ask=$('#need_ask').value.trim(),notes=$('#need_notes').value.trim();
- if(!ask){banner('Need something to do.');return}
- try{await api('/api/action',{action:'add',owner,ask,notes});$('#need_who').value='';$('#need_ask').value='';$('#need_notes').value='';banner('');await loadState();renderLists()}
- catch(e){banner('Could not add that: '+e.message)}}
-async function refresh(slackOnly){if(running('refresh'))return;await api('/api/refresh',{slack_only:!!slackOnly});J.refresh={running:true};tick()}
+ if(!ask){$('#need_ask').focus();toast('Type what needs doing first',{err:true});return}
+ try{const r=await api('/api/action',{action:'add',owner,ask,notes});$('#need_who').value='';$('#need_ask').value='';$('#need_notes').value='';banner('');await loadState();renderLists();
+  toast('Added to Needs me: '+(owner?owner+' — ':'')+ask,{undo:()=>act(r.id,'done',null,true),undoLabel:'Undo'})}
+ catch(e){toast('Could not add that: '+e.message.replace(/^.*-> \d+ /,''),{err:true})}}
+const counts=()=>{const L=(S&&S.loops)||[],live=l=>l.status!=='done'&&!(l.snooze_until&&l.snooze_until>TODAY);return{needs:L.filter(l=>l.status==='needs_me'&&live(l)).length,wait:L.filter(l=>l.status==='waiting'&&live(l)).length,ids:new Set(L.map(l=>l.id))}};
+let before=null;   // counts when a refresh started, so the finish toast can say what changed
+async function refresh(slackOnly){if(running('refresh'))return;before=counts();
+ try{await api('/api/refresh',{slack_only:!!slackOnly})}catch(e){toast('Refresh could not start: '+e.message.replace(/^.*-> \d+ /,''),{err:true});return}
+ J.refresh={running:true};tick()}
 
 // ---------- day log: instant digest from state, prose on demand ----------
 let DL=null;
@@ -455,7 +514,8 @@ async function rmPost(){if(!rmArmed){rmArmed=true;$('#rm_armmsg').textContent='p
 async function chase(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
  if(willSend(l)&&!confirm(`This will SEND a chase to ${l.owner} right now, in your name, without you seeing it first.\n\nSend?`))return;
  if(!willSend(l)&&l.last_chase_at&&!confirm(`You already ${l.last_chase_mode==='send'?'sent':'drafted'} a chase for ${l.owner} on ${fmt(l.last_chase_at)}.\nIf a draft is still unsent this will create a second one.\n\nDraft another?`))return;
- await api('/api/chase',{id});J.chase={running:true};tick()}
+ try{await api('/api/chase',{id})}catch(e){toast('Chase could not start: '+e.message.replace(/^.*-> \d+ /,''),{err:true});return}
+ J.chase={running:true};toast((willSend(l)?'Sending a chase to ':'Drafting a chase for ')+l.owner+'… about a minute');tick()}
 
 // ---------- settings form: painted only on first open and after Save, never by background ticks ----------
 function paintForm(){if(!C)return;formPainted=true;$('#cfg_name').value=C.owner_name||'';$('#cfg_agent').value=C.agent||'claude';$('#cfg_model').value=C.model===undefined?'sonnet':(C.model||'');$('#cfg_effort').value=C.effort===undefined?'xhigh':(C.effort||'');$('#cfg_model_wrap').style.display=(C.agent||'claude')==='claude'?'':'none';$('#cfg_use_slack').checked=!!C.use_slack;$('#cfg_history').value=String(C.history_days||30);$('#cfg_time').value=C.refresh_time||'09:15';
@@ -479,20 +539,36 @@ async function saveCfg(){try{const tone={};document.querySelectorAll('[data-tone
  const body={agent:$('#cfg_agent').value,model:$('#cfg_model').value,effort:$('#cfg_effort').value,use_slack:$('#cfg_use_slack').checked,history_days:+$('#cfg_history').value||30,owner_name:$('#cfg_name').value.trim(),vault_path:($('#cfg_vault')&&$('#cfg_vault').value.trim())||'',roadmap_board:$('#cfg_rm_board').value.trim(),roadmap_frame:$('#cfg_rm_frame').value.trim(),chase_external_email:$('#cfg_ext').checked,send_internal:$('#cfg_send_int').checked,send_external:$('#cfg_send_ext').checked,internal_domains:$('#cfg_domains').value.split(',').map(s=>s.trim().toLowerCase()).filter(Boolean),auto_chase:{enabled:$('#cfg_auto').checked,after_workdays:+$('#cfg_auto_days').value||3,max_chases:+$('#cfg_auto_max').value||3},tone,people,
   exclude_people:$('#cfg_excl_people').value.split(',').map(s=>s.trim()).filter(Boolean),exclude_topics:$('#cfg_excl_topics').value.split(',').map(s=>s.trim()).filter(Boolean)};
  const agentChanged=(C.agent||'claude')!==body.agent,slackChanged=!!C.use_slack!==body.use_slack;
- await api('/api/config',body);$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString();await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);await loadRm();tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message}}
+ await api('/api/config',body);dirty=false;$('#cfg_save').textContent='Save settings';$('#cfg_msg').textContent='saved '+new Date().toLocaleTimeString()+(agentChanged||slackChanged?' - re-checking connections on Home':'');toast('Settings saved');await loadCfg();paintForm();if(agentChanged||slackChanged)doctor(true);await loadRm();tick()}catch(e){$('#cfg_msg').textContent='not saved: '+e.message;toast('Settings not saved: '+e.message.replace(/^.*-> \d+ /,''),{err:true})}}
+// Zeigarnik: an edited-but-unsaved form says so on the sticky bar (Save is always within reach) and on leaving the tab
+let dirty=false;
+function cfgDirty(){if(dirty)return;dirty=true;$('#cfg_save').textContent='Save settings (unsaved changes)';$('#cfg_msg').textContent=''}
+window.addEventListener('beforeunload',e=>{if(dirty){e.preventDefault();e.returnValue=''}});
 async function saveTime(){$('#time_msg').textContent='updating task…';const r=await api('/api/schedule',{time:$('#cfg_time').value});$('#time_msg').textContent=r.ok?'scheduled weekdays at '+$('#cfg_time').value:'failed: '+(r.error||r.out)}
 async function learnVoice(){if(!havePeople()||running('voice'))return;kicked.voice=true;await api('/api/voice',{});J.voice={running:true};paintButtons(stage())}
-async function startOver(){if(!confirm('Wipe the list, people picks and learned tone, and go back to step 1?'))return;await api('/api/reset',{});DOC=null;docAt=0;P=null;peopleRendered='';Object.keys(kicked).forEach(k=>delete kicked[k]);formPainted=false;await loadCfg();showTab('home');loop()}
+async function startOver(){if(!confirm('Wipe the list, people picks and learned tone, and go back to step 1?\n\nThis cannot be undone.'))return;await api('/api/reset',{});DOC=null;docAt=0;P=null;peopleRendered='';Object.keys(kicked).forEach(k=>delete kicked[k]);formPainted=false;await loadCfg();showTab('home');loop()}
 async function openClaude(){await api('/api/open-claude',{});$('#setup_msg').textContent=agentLabel()+' window opened — finish there, then come back. The ticks update by themselves.'}
 
 // ---------- doctor + the main loop ----------
 let docAt=0;
 async function doctor(force){$('#setup_msg').textContent=force?'checking…':'';DOC=await api('/api/doctor',{force:!!force,detect:true});docAt=Date.now();if(force){$('#setup_msg').textContent='';tick()}}
-let wasRunning=false,loopT=null;
+let wasRunning=false,loopT=null,said={};
+// Peak-End: when a job ends, say what it did and what is next - never just let the spinner vanish
+function finished(){if(!J)return;for(const k of Object.keys(J)){const j=J[k];if(!j||j.running||j.rc===undefined||said[k]===j.log)continue;said[k]=j.log;
+ const ok=j.rc===0,tail=(j.log||'').trim().split('\n').pop()||'';
+ if(!ok&&j.rc===2){toast(`${k}: skipped - ${tail.replace(/^SKIPPED:?\s*/i,'')}`,{ms:6000});continue}
+ if(!ok){toast(`${k} didn't finish - details under "Last job output"`,{err:true,ms:8000});continue}
+ if(k==='refresh'){const a=counts(),b=before||a;const fresh=[...a.ids].filter(x=>!b.ids.has(x)).length;before=null;
+  toast(`Refresh done: ${fresh} new, ${a.needs} need you, ${a.wait} waiting on them`);continue}
+ if(k==='chase')toast('Chase '+(/sent/i.test(tail)?'sent':'drafted')+' - check the thread',{ms:6000});
+ else if(k==='daylog')toast('Day log written - copy it or open the page below');
+ else if(k==='roadmap')toast('Roadmap step done - see the result in the Roadmap section');
+ else if(k==='voice')toast('Tone learned - chases will sound like you');
+ else if(k==='people')toast('People suggested - pick their seniority');}}
 async function loop(){clearTimeout(loopT);try{
   await loadState();
   const now=Object.values(J).some(j=>j.running);
-  if(wasRunning&&!now){await loadCfg();await loadDaylog();await loadRm()}   // a job just finished: pick up new people/voice/config/day log/roadmap
+  if(wasRunning&&!now){await loadCfg();await loadDaylog();await loadRm();finished()}   // a job just finished: pick up new people/voice/config/day log/roadmap, say what happened
   wasRunning=now;
   const st=stage();
   if((st==='connect'||st==='checking')&&Date.now()-docAt>60000)await doctor(false);

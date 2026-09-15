@@ -90,7 +90,10 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
   (browser crash, laptop shut), the app notices within 15 minutes, and in any case quits after 3 h idle.
 - **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
-- **done / snooze / reopen** are local only. Recently-closed loops are still watched for 5 days and reopen if the person comes back with a new question.
+- **done / snooze / reopen** are local only, and each one shows a toast with **Undo** for a few seconds. Snooze offers
+  tomorrow / 2 days / next Monday / a week or a date. Recently-closed loops are still watched for 5 days and reopen if the
+  person comes back with a new question. Each card shows its one main action (draft chase, or done when it needs you);
+  note, + link, + note and the auto-chase switch sit under **more ▾**.
 - **⚙ Settings** (bottom of the page): external-email chasing on/off, tone per seniority, people list, exclusions, and *Learn my tone*.
 - **Update Slack** (next to Refresh, shown once Slack is connected) is a quick Slack-only pass: no email, about a
   third of the time. It keeps its own cursor, so the next full Refresh still picks up every email ask made in between.

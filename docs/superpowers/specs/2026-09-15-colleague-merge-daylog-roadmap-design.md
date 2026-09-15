@@ -171,6 +171,25 @@ in the wrong cell more than about one run in five, or the daily cap blocks a bui
   gating, build refused without confirm; no agent involved.
 - Existing tests keep passing: `test_manual_notes`, `test_port_clash`, `test_standing`.
 
+## UX pass (2026-09-15, against the 20 UX laws)
+
+Single role: the owner. Primary goal: see what needs me and what is stuck, act on it in one click.
+
+- **Fitts**: every control is at least 36 px tall; chip × and row × are padded buttons; global `:focus-visible` ring.
+- **Von Restorff / Hick**: one primary action per card (draft chase when waiting on them, done when it needs you);
+  snooze quiet; note, + link, + note and auto-chase behind **more ▾** (remembered per card across re-renders).
+- **Doherty / Peak-End / Postel (recover)**: every card action dims the card at once, then a toast says what happened;
+  done, snooze, reopen, unsnooze and auto on/off carry **Undo**; failures toast with the reason and leave the card as it
+  was. Job endings toast a summary (refresh: new / need you / waiting counts; chase: sent or drafted; skipped or failed
+  jobs say so).
+- **Postel (prevent) / Similarity**: the three native `prompt()` boxes and the vault-close popup are one `<dialog>` with
+  labelled fields, Esc / Enter, and the input kept on a validation error. Snooze offers tomorrow / 2 days / next
+  Monday / a week or a date.
+- **Serial position / Miller / Zeigarnik (Settings)**: four groups (You, Chasing, Connections, App); Quit and Start
+  over last, Start over marked destructive and its confirm says "cannot be undone"; a sticky Save bar that reads
+  "unsaved changes" once anything is edited, and a leave-page warning while unsaved.
+- **States**: "Checking your connections…" while the doctor runs instead of a blank Home.
+
 ## Out of scope
 
 - Sending email via the bundled Gmail MCP server, profiles, Gemini agent (ROADMAP.md).
