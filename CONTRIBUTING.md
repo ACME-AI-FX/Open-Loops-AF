@@ -47,9 +47,10 @@ you would be reading old code while thinking you were on new.
 - **`develop`** is where work happens. Every branch starts from it and every PR lands on it. It is GitHub's
   default branch.
 - **`main`** is the live app. It only moves when the owner fast-forwards it from `develop`
-  (`git checkout main && git merge --ff-only develop && git push`), which is what the installed copy, the
-  GitHub Pages site (`docs/` on `main`) and the downloadable installers (they fetch `main`) pick up. Tag a
-  release from `main` (`git tag v0.2 && git push origin v0.2`) to publish new installers.
+  (`git checkout main && git merge --ff-only develop && git push`), which is what the installed copy and the
+  GitHub Pages site (`docs/` on `main`) pick up. Tag a release from `main` (`git tag v0.2 && git push origin v0.2`)
+  to publish new installers; each release's installers fetch the commit that tag points to, and a locally built
+  installer fetches `main` unless told otherwise.
 - Fallen behind? Rebase onto `develop`, never `main` (`git fetch origin develop && git rebase origin/develop`),
   then `npm test`. Park uncommitted work on a temporary branch rather than `git stash`: the stash is shared
   across worktrees.
