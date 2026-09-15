@@ -28,6 +28,16 @@ while [[ $# -gt 0 ]]; do
 done
 [ -n "$LABEL" ] || LABEL="$REF"
 
+# These land in Info.plist, a shell script and a URL via sed. Refuse anything outside the characters a
+# GitHub slug, git ref or version number actually uses (& | " $ ; are legal in git ref names but would
+# corrupt the output).
+for v in REPO REF LABEL VERSION; do
+    if [[ ! "${!v}" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+        echo "--$(echo "$v" | tr 'A-Z' 'a-z') '${!v}' may only contain letters, digits, . _ / -" >&2
+        exit 1
+    fi
+done
+
 HERE="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$HERE/../.." && pwd)"
 STAGE="$(mktemp -d)"
