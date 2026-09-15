@@ -23,7 +23,11 @@ install logic and means the installer rarely needs rebuilding.
 
 ## Releasing
 
+Work lands on `develop`; `main` is the live app. Fast-forward `main` when you want the installed copies and the
+installers to pick the new code up, then tag it:
+
 ```
+git checkout main && git merge --ff-only develop && git push
 git tag v0.2
 git push origin v0.2
 ```
