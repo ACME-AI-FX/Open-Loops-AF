@@ -1,5 +1,6 @@
 {
   "agent": "claude",
+  "model": "sonnet",
   "history_days": 30,
   "owner_name": "",
   "use_slack": false,

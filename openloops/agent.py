@@ -37,8 +37,8 @@ _GROK_DISALLOWED = (
 
 
 def _cfg():
-    f = ROOT / "config.json"
-    return json.loads(f.read_text(encoding="utf-8-sig")) if f.exists() else {}
+    from .store import load_cfg  # config.json over config.template.json, so "model" has its default
+    return load_cfg()
 
 
 def name():
@@ -122,6 +122,21 @@ def _qualify(tools):
     return list(dict.fromkeys(out))
 
 
+def model():
+    """config.json "model": the Claude model the jobs run on. An alias (sonnet, haiku, opus) or a
+    full id. Blank means whatever `claude` defaults to on this machine, which is usually the most
+    expensive model the user has - so the template says sonnet: plenty for reading threads and
+    writing JSON, at a fraction of the cost. Grok ignores it."""
+    return str(_cfg().get("model") or "").strip()
+
+
+def claude_args(tools):
+    args = ["claude", "-p", "--output-format", "text", "--allowedTools", ",".join(_qualify(tools))]
+    if model():
+        args += ["--model", model()]
+    return args
+
+
 def run(prompt, tools):
     """One unattended prompt with only the given MCP tools allowed -> CompletedProcess."""
     if name() == "grok":
@@ -137,7 +152,5 @@ def run(prompt, tools):
         return subprocess.run(args, capture_output=True, text=True,
                               encoding="utf-8", errors="replace", env=grok_job_env(), shell=WIN)
     # shell=True only on Windows, to resolve claude.cmd (npm shim) via PATH
-    return subprocess.run(["claude", "-p", "--output-format", "text",
-                           "--allowedTools", ",".join(_qualify(tools))],
-                          input=prompt, capture_output=True, text=True,
+    return subprocess.run(claude_args(tools), input=prompt, capture_output=True, text=True,
                           encoding="utf-8", errors="replace", shell=WIN)

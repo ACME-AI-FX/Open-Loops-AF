@@ -154,10 +154,22 @@ try:
     api("/api/config", {"roadmap_board": "https://miro.com/app/board/uXjVK1abc=/"})
     check(api("/api/roadmap")[1]["embed"].startswith("https://miro.com/app/live-embed/uXjVK1abc=/"), "a board link in Settings gives the page a live embed url")
 
+    # ---- model: saved from Settings, passed to claude as --model, blank = no flag
+    def claude_cmd():
+        r = subprocess.run([sys.executable, "-c", "from openloops import agent; print(' '.join(agent.claude_args(['slack.read_channel'])))"],
+                           cwd=tmp, capture_output=True, text=True)
+        return r.stdout.strip()
+    check("--model sonnet" in claude_cmd(), "fresh install runs the jobs on sonnet (template default)")
+    api("/api/config", {"model": "haiku"})
+    check(claude_cmd().endswith("--model haiku"), "model from Settings reaches the claude command line")
+    api("/api/config", {"model": ""})
+    check("--model" not in claude_cmd(), "blank model -> no --model flag (Claude Code default)")
+    api("/api/config", {"model": "sonnet"})
+
     # ---- page has the new controls
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
     check("x.id==='self'&&x.ok" in html, "Update Slack is shown only when Slack is connected and the owner's id is known")
-    for needle in ('id="uslack"', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
+    for needle in ('id="uslack"', 'id="cfg_model"', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
         check(needle in html, f"page has {needle}")
     say("ALL OK")
 finally:
