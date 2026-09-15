@@ -166,7 +166,7 @@ try:
     check("--effort" not in claude_cmd(), "blank effort -> no --effort flag")
     api("/api/config", {"effort": "xhigh"})
     api("/api/config", {"model": "haiku"})
-    check(claude_cmd().endswith("--model haiku"), "model from Settings reaches the claude command line")
+    check("--model haiku --effort xhigh" in claude_cmd(), "model from Settings reaches the claude command line")
     api("/api/config", {"model": ""})
     check("--model" not in claude_cmd(), "blank model -> no --model flag (Claude Code default)")
     api("/api/config", {"model": "sonnet"})
