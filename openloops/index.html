@@ -33,7 +33,6 @@ label:has(>input:checked){background:var(--bg)}
 .rmrow.rmhead{font-size:11px;color:var(--mut);text-transform:uppercase;letter-spacing:.05em;border-top:0}
 .rmrow button{padding:0;width:36px;font-size:14px;color:var(--mut)}
 pre.out{white-space:pre-wrap;font:13px/1.55 system-ui,Segoe UI,sans-serif;margin:8px 0 0;max-height:360px;overflow:auto;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:10px}
-details.sect{margin-top:16px}details.sect>summary{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);cursor:pointer}details.sect>summary span{letter-spacing:0;text-transform:none}
 main{max-width:1100px;margin:0 auto;padding:20px 24px}
 h2{font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);margin:22px 0 8px}
 h3{margin:4px 0 6px;font-size:14px}
@@ -59,7 +58,7 @@ details.cfg>summary::-webkit-details-marker{display:none}details.cfg>summary:hov
 details.cfg>summary::before{content:"›";display:inline-block;width:14px;color:var(--mut);transition:transform .15s}details.cfg[open]>summary::before{transform:rotate(90deg)}
 details.cfg>summary b{font-size:14px;min-width:110px}details.cfg>summary .sub{margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 details.cfg[open]>summary{border-bottom:1px solid var(--line);border-radius:8px 8px 0 0}details.cfg>.body{padding:12px 16px 2px}details.cfg>.body .box{padding:12px 0 14px;border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0}details.cfg>.body .box:last-child{border-bottom:0}
-details.cfg.danger{border-color:var(--r)}
+details.cfg.danger{border-color:var(--r)}details.cfg>.body>.card:last-child,details.cfg>.body>div>.card:last-child{margin-bottom:10px}details.cfg>.body .empty{padding:4px 0 12px}#lists details.cfg{margin-bottom:8px}
 .cfg-head{display:flex;align-items:baseline;gap:12px;margin:0 0 10px}.cfg-head h2{margin:0;flex:1}.cfg-head button{min-height:32px;padding:0 8px;font-size:12px}
 @media(max-width:720px){details.cfg>summary{flex-wrap:wrap;gap:2px 12px}details.cfg>summary .sub{flex-basis:100%;padding-left:26px;white-space:normal}}
 #savebar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);margin:8px -24px 0;padding:10px 24px;display:flex;gap:10px;align-items:center;z-index:2}
@@ -116,9 +115,8 @@ details.cfg.danger{border-color:var(--r)}
    <div class="sub" style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span id="pin_embed_title"></span><a id="pin_embed_open" href="#" target="_blank" rel="noopener">open in Miro</a><button class="quiet" onclick="pinEmbed(null)">close</button></div>
    <iframe id="pin_embed" style="width:100%;height:520px;border:1px solid var(--line);border-radius:6px;background:var(--bg)" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer-when-downgrade"></iframe>
   </div>
-  <h2>Needs me <span id="n1"></span></h2>
   <div class="box" id="add_need" style="padding:10px 12px">
-   <div class="sub" style="margin-bottom:8px">Add something you need to do for someone. It stays here until you mark it done — Refresh does not close these.</div>
+   <div class="sub" style="margin-bottom:8px"><b>Add a note</b> — something you need to do, for someone or just for you. It stays under Needs me until you mark it done; Refresh does not close these.</div>
    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
     <input id="need_who" list="need_people" placeholder="contact (optional)" style="width:170px" autocomplete="off" onkeydown="if(event.key==='Enter')addNeed()">
     <datalist id="need_people"></datalist>
@@ -127,11 +125,9 @@ details.cfg.danger{border-color:var(--r)}
    </div>
    <input id="need_notes" placeholder="note (optional)" style="width:100%;margin-top:6px" onkeydown="if(event.key==='Enter')addNeed()">
   </div>
-  <div id="needs"></div>
-  <h2>Waiting on them <span id="n2"></span></h2><div id="waiting"></div>
-  <details><summary>Snoozed / done</summary><div id="rest"></div></details>
- </div>
- <details class="sect" id="dl_wrap"><summary>Day log <span class="sub" id="dl_meta"></span></summary>
+  <details class="cfg" id="hs_needs" ontoggle="cfgRemember(this)"><summary><b>Needs me</b><span class="sub" id="n1"></span></summary><div class="body"><div id="needs"></div></div></details>
+  <details class="cfg" id="hs_waiting" ontoggle="cfgRemember(this)"><summary><b>Waiting on them</b><span class="sub" id="n2"></span></summary><div class="body"><div id="waiting"></div></div></details>
+ <details class="cfg" id="dl_wrap" ontoggle="cfgRemember(this)"><summary><b>Day log</b><span class="sub" id="dl_meta"></span></summary>
   <div class="box" style="margin-top:8px">
    <div class="sub" id="dl_digest"></div>
    <div style="margin:8px 0 0;display:flex;gap:6px;align-items:center;flex-wrap:wrap">
@@ -143,7 +139,7 @@ details.cfg.danger{border-color:var(--r)}
    <pre id="dl_text" class="out" style="display:none"></pre>
   </div>
  </details>
- <details class="sect" id="rm_wrap"><summary>Roadmap <span class="sub" id="rm_head"></span></summary>
+ <details class="cfg" id="rm_wrap" ontoggle="cfgRemember(this)"><summary><b>Roadmap</b><span class="sub" id="rm_head"></span></summary>
   <div class="box" id="roadmap" style="margin-top:8px;display:none">
    <div class="sub" id="rm_board"></div>
    <div class="sub" style="margin:8px 0 4px">Paste your standup notes — one thought per line is plenty. Reading them fills in the lane, column, owner and state; fix anything it got wrong before it goes near the board.</div>
@@ -170,7 +166,8 @@ details.cfg.danger{border-color:var(--r)}
    </details>
   </div>
  </details>
- <details style="margin-top:14px"><summary>Last job output</summary><pre id="log" class="log"></pre></details>
+ <details class="cfg" id="hs_rest" ontoggle="cfgRemember(this)"><summary><b>Snoozed / done</b><span class="sub" id="n3"></span></summary><div class="body"><div id="rest"></div></div></details>
+ </div>
 </div>
 <!-- one dialog for snooze / note / link / closing a vault item: same look, Esc cancels, Enter submits, input kept on error -->
 <dialog id="dlg"><form method="dialog" class="box" style="padding:16px 18px" onsubmit="return dlgSubmit(event)">
@@ -273,6 +270,7 @@ details.cfg.danger{border-color:var(--r)}
  <div class="box">
   <h3>What Open Loops writes to disk</h3>
   <div class="sub">Everything lives next to the app, nothing else on this computer is touched: <code>state.json</code> (your list), <code>state/logs/</code> (one log per job run), <code>state/daylog/&lt;date&gt;.json</code> + <code>.html</code> (each Day log), <code>state/roadmap.json</code> and <code>state/roadmap-created.txt</code> (Miro cards it added), and your own to-do file if you set one under Connections.</div>
+  <details style="margin-top:8px"><summary>Last job output</summary><pre id="log" class="log"></pre></details>
  </div>
  </div></details>
  <details class="cfg" id="cs_connections" ontoggle="cfgRemember(this)"><summary><b>Connections</b><span class="sub">your own to-do file · Miro roadmap board</span></summary><div class="body">
@@ -379,7 +377,7 @@ async function tick(){
  $('#steps').innerHTML=st==='ready'?'':st==='checking'?'<span class="sub"><span class="spin"></span>Checking your connections…</span>':ORDER.filter(x=>x[0]!=='ready').map(([k,t],i)=>`<span class="${ORDER.findIndex(o=>o[0]===st)>i?'done':k===st?'now':''}">${i+1} · ${t}${ORDER.findIndex(o=>o[0]===st)>i?' ✓':''}</span>`).join('');
  for(const k of ['connect','people','auto'])$('#st_'+k).style.display='none';
  // Hick / Prägnanz: while setting up, the page is the setup - the lists, Day log and Roadmap wait until "ready"
- $('#lists').style.display=st==='ready'?'':'none';$('#dl_wrap').style.display=st==='ready'?'':'none';$('#rm_wrap').style.display=st==='ready'?'':'none';
+ $('#lists').style.display=st==='ready'?'':'none';
  if(lastStage&&lastStage!=='ready'&&lastStage!=='checking'&&st==='ready')toast(`All set. Open Loops now refreshes itself every weekday morning at ${(C&&C.refresh_time)||'09:15'}; press Refresh any time for a fresh pass.`,{ms:10000});
  lastStage=st;
  if(st==='connect')paintConnect();
@@ -395,7 +393,7 @@ async function stagePeople(){
  if(!P&&!running('people')&&!kicked.people){kicked.people=true;await api('/api/people',{});J.people={running:true}}
  if(running('people')){$('#people_list').innerHTML='<span class="sub"><span class="spin"></span>Looking at who you talk to on Slack and email… about a minute.</span>';peopleRendered='';$('#people_save').disabled=true;$('#people_again').disabled=true;return}
  $('#people_again').disabled=false;
- if(!P||!P.people||!P.people.length){$('#people_list').innerHTML='<span class="sub">Couldn\'t find anyone. '+(J.people&&J.people.log?'Details under "Last job output" below. ':'')+'Press <b>Look again</b>.</span>';$('#people_save').disabled=true;peopleRendered='';return}
+ if(!P||!P.people||!P.people.length){$('#people_list').innerHTML='<span class="sub">Couldn\'t find anyone. '+(J.people&&J.people.log?'Details under Settings → History → "Last job output". ':'')+'Press <b>Look again</b>.</span>';$('#people_save').disabled=true;peopleRendered='';return}
  $('#people_save').disabled=false;
  const key=JSON.stringify(P);if(peopleRendered===key)return;peopleRendered=key;   // only redraw when the suggestions change - never while you're clicking radios
  const L=['senior','peer','junior','external'];
@@ -461,7 +459,10 @@ function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=
  $('#needs').innerHTML=needs.map(l=>card(l)).join('')||'<div class="empty">nothing waiting on you</div>';
  $('#waiting').innerHTML=wait.map(l=>card(l)).join('')||'<div class="empty">nothing outstanding</div>';
  $('#rest').innerHTML=rest.map(l=>card(l,true)).join('');
- $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`;paintPins();
+ const by=wait.reduce((m,l)=>{m[col(l)]=(m[col(l)]||0)+1;return m},{});
+ $('#n1').textContent=needs.length?`${needs.length} · they replied or you wrote a note, you owe a reply`:'nothing waiting on you';
+ $('#n2').textContent=wait.length?`${wait.length} · `+[[by.g,'fresh'],[by.a,'amber'],[by.r,'red']].filter(x=>x[0]).map(x=>x.join(' ')).join(', '):'nothing outstanding';
+ $('#n3').textContent=rest.length?`${rest.length} · watched for 5 days in case they come back`:'none yet';paintPins();
  const dl=$('#need_people');if(dl)dl.innerHTML=Object.keys((C&&C.people)||{}).sort().map(n=>`<option value="${esc(n)}">`).join('')}
 const who=l=>l?((l.owner?l.owner+' — ':'')+(l.ask||'')).slice(0,60):'';
 // every card action: card dims at once (pending), then a toast says what happened; done/snooze/reopen offer Undo
@@ -541,7 +542,7 @@ function rmRows(){return (RM&&RM.store&&RM.store.rows)||[]}
 async function loadRm(){try{RM=await api('/api/roadmap')}catch(e){RM=null}rmRendered='';paintRm()}
 function paintRm(){if(!RM||!$('#roadmap'))return;
  if(!miroOk()){$('#rm_head').textContent='· connect Miro in Claude to use this (see the connection checklist)';$('#roadmap').style.display='none';return}
- if(!RM.configured.ok){$('#rm_head').innerHTML='· <a href="#" onclick="showTab(&quot;settings&quot;,&quot;cs_connections&quot;);return false">set the board and frame in Settings</a>';$('#roadmap').style.display='none';return}
+ if(!RM.configured.ok){$('#rm_head').innerHTML='· <a href="#" onclick="showTab(&quot;settings&quot;,&quot;cs_connections&quot;);return false" title="opens Settings">set the board and frame in Settings</a>';$('#roadmap').style.display='none';return}
  $('#roadmap').style.display='';const b=RM.store.board||{};
  $('#rm_head').textContent='· '+(b.frame||RM.configured.frame)+(b.read_at?' · read '+fmt(b.read_at):' · board not read yet');
  const busy=running('roadmap');for(const id of ['#rm_parsebtn','#rm_readbtn','#rm_prevbtn'])$(id).disabled=busy;
@@ -634,7 +635,7 @@ let wasRunning=false,loopT=null,said={};
 function finished(){if(!J)return;for(const k of Object.keys(J)){const j=J[k];if(!j||j.running||j.rc===undefined||said[k]===j.log)continue;said[k]=j.log;
  const ok=j.rc===0,tail=(j.log||'').trim().split('\n').pop()||'';
  if(!ok&&j.rc===2){toast(`${k}: skipped - ${tail.replace(/^SKIPPED:?\s*/i,'')}`,{ms:6000});continue}
- if(!ok){toast(`${k} didn't finish - details under "Last job output"`,{err:true,ms:8000});continue}
+ if(!ok){toast(`${k} didn't finish - details under Settings → History → "Last job output"`,{err:true,ms:8000});continue}
  if(k==='refresh'){const a=counts(),b=before||a;const fresh=[...a.ids].filter(x=>!b.ids.has(x)).length;before=null;
   toast(`Refresh done: ${fresh} new, ${a.needs} need you, ${a.wait} waiting on them`);continue}
  if(k==='chase')toast('Chase '+(/sent/i.test(tail)?'sent':'drafted')+' - check the thread',{ms:6000});

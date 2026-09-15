@@ -95,7 +95,10 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
   double-click starts fresh with whatever code is installed. *Quit Open Loops* under Settings → App does the same
   without closing the tab, and `python -m openloops.app --stop` does it from a terminal. If the tab just vanished
   (browser crash, laptop shut), the app notices within 15 minutes, and in any case quits after 3 h idle.
-- **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).
+- **Home is a stack of collapsible sections**, all closed until you open them, and the browser remembers which you left open.
+  *Add a note* stays on top. Then **Needs me** (they replied, you owe a response), **Waiting on them** (your ask is outstanding:
+  green <2 workdays, amber 2–4, red >4), **Day log**, **Roadmap**, and **Snoozed / done** last. Each row shows its count and a
+  one-line summary (e.g. "7 · 3 fresh, 2 amber, 2 red"), so you can read the state of play without opening anything.
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
 - **done / snooze / reopen** are local only, and each one shows a toast with **Undo** for a few seconds. Snooze offers
   tomorrow / 2 days / next Monday / a week or a date. Recently-closed loops are still watched for 5 days and reopen if the
@@ -110,10 +113,10 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 - **+ link** on a card attaches a document URL (Drive, Miro, Notion, Figma); the refresh also captures any document
   link it sees in the thread. Links show as chips; bare URLs typed into a note become clickable too.
 - **+ note** on a card pre-fills the *Needs me* form with that person and ask, for a reminder to yourself about it.
-- **Day log** (collapsed section under the lists): what moved today, straight from the tracker. *Write it up* asks the
+- **Day log**: what moved today, straight from the tracker. *Write it up* asks the
   AI to read today's sent messages and write a short first-person note (Done / Moved / Waiting on) with a copy button
   and a printable page. Nothing is sent.
-- **Roadmap** (collapsed section; needs Miro connected and a board + frame set in Settings): paste standup notes,
+- **Roadmap** (needs Miro connected and a board + frame set in Settings): paste standup notes,
   *Read these notes* turns them into rows with lane / column / owner, fix any mistakes, *Preview* shows what would be
   added, then *Add to the roadmap* (press twice within 6 s) adds one sticky note per row inside the frame. It never
   deletes, moves or edits anything on the board. *Read board* first so the lane and column choices match the frame.

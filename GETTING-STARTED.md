@@ -35,13 +35,14 @@ When the required rows are ticked the checklist disappears and your list starts 
 ## 3. Every day
 
 - Double-click **Open Loops** on the Desktop, or the same icon in the Dock. It refreshes itself every weekday morning at 09:15, so it's ready when you sit down.
-- **Needs me** — people who've replied and are waiting on *you*.
+- The page is a stack of sections, closed until you open them (it remembers which). **Add a note** stays on top.
+- **Needs me** — people who've replied and are waiting on *you*. The row shows the count even when closed.
 - **Waiting on them** — things you've asked for. Green = recent, amber = a few days, red = getting old.
 - **draft chase** — writes a friendly nudge in your voice and puts it in the conversation as an unsent draft. You read it, you press send.
 - **done** when it's sorted. **snooze** to hide it for a bit. Both give you a few seconds to **Undo**. Notes,
   links and the auto-chase switch are under **more ▾** on each card.
 - **Pinned** (top of the page) — pin the boards and docs you open every day. A Miro board opens right there.
-- **Day log** (under the lists) — what moved today. **Write it up** drafts a short end-of-day note you can copy.
+- **Day log** — what moved today. **Write it up** drafts a short end-of-day note you can copy.
 - **Closing the tab stops the app.** Next time, just double-click the icon again.
 
 ## 4. Make it sound like you
@@ -63,4 +64,4 @@ automatically; every item has an *auto: on/off* switch so you can leave one alon
 - It only ever looks at your own sent messages, and at the threads they're in.
 - It uses your normal Claude subscription — no extra accounts, no API keys.
 - WhatsApp isn't supported (WhatsApp doesn't allow it).
-- If something looks wrong, the "Last job output" box at the bottom of Home shows what happened, and the `state/logs` folder keeps a record.
+- If something looks wrong, ⚙ Settings → History → "Last job output" shows what happened, and the `state/logs` folder keeps a record.
