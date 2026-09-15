@@ -200,10 +200,25 @@ try:
     api("/api/config", {"pinned_links": []})
     check(api("/api/config")[1]["config"]["pinned_links"] == [], "pins can be cleared")
 
+    # ---- priority: the person's call sticks; the AI may only set it while nobody has
+    code, err = api("/api/action", {"id": "alice-report", "action": "priority", "priority": "urgent"})
+    check(code == 400 and "high, normal or low" in err.get("error", ""), "priority refuses anything but high/normal/low")
+    code, _ = api("/api/action", {"id": "alice-report", "action": "priority", "priority": "high"})
+    alice = next(l for l in api("/api/state")[1]["state"]["loops"] if l["id"] == "alice-report")
+    check(code == 200 and alice["priority"] == "high" and alice["priority_by"] == "you", "priority set by hand is marked as yours")
+
+    # ---- /api/diag: what the Console's "Copy all" pastes
+    code, d = api("/api/diag")
+    check(code == 200 and d["port"] == PORT and d["build"] == "checkout" and "python" in d and "up_since" in d, "diag names port, build, python, start time")
+    check("refresh" in d["jobs"] and "rc" in d["jobs"]["refresh"] and "doctor" in d, "diag carries job results and the last check")
+
     # ---- page has the new controls
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
+    for needle in ('id="console_wrap"', "function clog(", "'/api/diag'", 'id="st_checkfail"', "return 'checkfail'", "function personRow(", "class=\"blk ", "function priSel(", "setSort("):
+        check(needle in html, f"page has {needle}")
+    check("Check failed" not in html, "no bare 'Check failed' anywhere on the page")
     check("x.id==='self'&&x.ok" in html, "Update Slack is shown only when Slack is connected and the owner's id is known")
-    for needle in ('id="uslack"', 'id="cfg_model"', 'id="cfg_effort"', 'id="cfg_standing"', 'standingCreate(', 'id="pins"', 'pinEmbed(', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
+    for needle in ('id="uslack"', 'id="cfg_model"', 'id="cfg_effort"', 'id="cfg_standing"', 'standingCreate(', 'id="pins"', 'pinEmbed(', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"', 'id="cs_personal"', 'id="cs_app"', 'cfgRestore(', "ol.settings.open", 'id="hs_needs"', 'id="hs_waiting"', 'id="hs_rest"', 'id="n3"'):
         check(needle in html, f"page has {needle}")
     say("ALL OK")
 finally:

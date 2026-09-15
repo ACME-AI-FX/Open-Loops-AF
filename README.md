@@ -28,8 +28,12 @@ they can keep in their head. Connect either source, or both. Each works on its o
 ## What it does
 
 - **Two lists, so you always know where you stand.** *Needs me* is the people who have replied and are now
-  waiting on you. *Waiting on them* is your asks that are still outstanding, coloured green under two
-  workdays, amber at two to four, red beyond that.
+  waiting on you. *Waiting on them* is your asks that are still outstanding. Each list is one row per
+  person: their name, a small block per loop coloured by age (green under two workdays, amber at two to
+  four, red beyond that), and a line on what the loops are about. Click the person to open the cards.
+- **Priority, judged for you and correctable by you.** The refresh marks each loop high, normal or low
+  and names its theme in a few words. Change the priority on a card and your setting sticks; the AI
+  never overrides a priority you set. Sort a list by oldest first or by priority.
 - **Writes the chase so you don't have to.** *draft chase* puts a "just checking in…" nudge into the
   original Slack DM or email thread as a **draft** you read and send. It learns your voice from how you
   already write to those people and pitches it by seniority, so the nudge to your boss does not read like
@@ -56,6 +60,8 @@ they can keep in their head. Connect either source, or both. Each works on its o
   one sticky note per row to a frame on your Miro roadmap. It never deletes, moves or edits anything there.
 - **Closing the tab stops the app.** No stray server to hunt for in Task Manager. *Quit* in Settings does
   the same, and the next double-click starts fresh.
+- **A Console at the bottom of the page** keeps a short record of what the page did (checks, jobs, errors).
+  *Copy all* adds what the app knows about itself, so a bug report is one paste, not a screenshot.
 
 Setting up takes one pass through Settings. On first run the page shows only the setup steps: it suggests
 the dozen or so people you message most, guesses *senior / peer / junior / external* for each, and asks you
@@ -97,15 +103,16 @@ checkout folder, in any terminal (needs Node for the `npm` wrapper, nothing is i
 
 | Command | What it does |
 |---|---|
-| `npm run dev` | start this checkout on http://localhost:8766 and open the browser (never collides with the installed copy) |
-| `npm run stop` | stop it, same as closing its tab |
+| `npm run dev` | stop any earlier dev session, then start this checkout on http://localhost:8766 and open the browser (never touches the installed copy) |
+| `npm run stop` | stop it, same as closing its tab (`-- --now` does not wait for a running job) |
+| `npm run prod` | start, or just open, the installed copy on 8765: the live version you use day to day |
 | `npm test` | every `tests/test_*.py`, with a summary |
 | `npm run doctor` | the connection checklist with Slack / Miro route detection |
 | `npm run refresh` | one refresh job in the foreground (`-- --slack-only` for the quick pass) |
 | `npm run setup` | install or upgrade the installed copy from this checkout (keeps its config and state) |
 
 Anything after `--` is passed through, e.g. `npm run dev -- --no-browser`. Without Node:
-`python -m openloops.app --port 8766`, `python -m openloops.app --stop --port 8766`, `python tests/run_all.py`.
+`python -m openloops.app --port 8766`, `python -m openloops.app --stop [--now] --port 8766`, `python tests/run_all.py`.
 The full developer guide (two copies / two ports, making a change, where things live, conventions) is
 [CONTRIBUTING.md](CONTRIBUTING.md).
 
@@ -114,7 +121,7 @@ The full developer guide (two copies / two ports, making a change, where things 
 | Path | What it does |
 |---|---|
 | `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`; `--port N` to choose, `--stop` quits a running one, as does closing the tab) |
-| `package.json`, `scripts/loops.mjs` | `npm run dev` / `stop` / `test` / `doctor` / `refresh` / `setup` for a checkout (no npm packages) |
+| `package.json`, `scripts/loops.mjs` | `npm run dev` / `stop` / `prod` / `test` / `doctor` / `refresh` / `setup` for a checkout (no npm packages) |
 | `openloops/refresh.py` | finds new asks, checks open threads for replies (`--slack-only` for a quick Slack pass) |
 | `openloops/chase.py` · `autochase.py` | drafts (or, if you tick the boxes, sends) a nudge; the optional timer |
 | `openloops/voice.py` · `people.py` | learns how you write to each person; finds who you talk to most |

@@ -27,7 +27,7 @@ whichever is available (Gmail-only and Slack-only installs both work).
 
 ### Choosing your AI
 
-`config.json` has `"agent": "claude"` (default) or `"grok"` — change it in ⚙ Settings → *Your AI*. `agent.py` maps
+`config.json` has `"agent": "claude"` (default) or `"grok"` — change it in ⚙ Settings → Preferences → *Your AI*. `agent.py` maps
 each job's tool list to the agent's own naming and flags; the prompts are identical. The connection checklist
 (`doctor.py`) checks whichever agent is selected. With Grok, Slack is **opt-in** (`"use_slack"`): off, jobs are
 Gmail-only and the Slack plugin is not started or probed. Vercel is never loaded. Headless Grok jobs pass
@@ -92,25 +92,37 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
   writes that back. The format and everything else Open Loops logs are listed under that setting. The old
   `vault_path` folder setting still works.
 - **Closing the tab stops the app** a few seconds later (it waits for any running job first), so the next
-  double-click starts fresh with whatever code is installed. *Quit Open Loops* at the bottom of Settings does the same
+  double-click starts fresh with whatever code is installed. *Quit Open Loops* under Settings → App does the same
   without closing the tab, and `python -m openloops.app --stop` does it from a terminal. If the tab just vanished
   (browser crash, laptop shut), the app notices within 15 minutes, and in any case quits after 3 h idle.
-- **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).
+- **Home is a stack of collapsible sections**, all closed until you open them, and the browser remembers which you left open.
+  *Add a note* stays on top. Then **Needs me** (they replied, you owe a response), **Waiting on them** (your ask is outstanding:
+  green <2 workdays, amber 2–4, red >4), **Day log**, **Roadmap**, and **Snoozed / done** last. Each row shows its count and a
+  one-line summary (e.g. "7 · 4 people · 3 fresh, 2 amber, 2 red"), so you can read the state of play without opening anything.
+- Inside *Needs me* and *Waiting on them* the loops are grouped **by person**: one row each, with a colour
+  block per loop (age) and a short line on what they are about; click the row for the cards. Cards carry a
+  **priority** select (high / normal / low, guessed by the refresh, yours once you change it) and lists can
+  be sorted oldest-first or by priority.
+- A **Console** section sits at the bottom of both tabs: a timestamped record of checks, jobs and errors, with
+  *Copy*, *Copy all* (adds build, port, last check and job output from `/api/diag`) and *Clear*.
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
 - **done / snooze / reopen** are local only, and each one shows a toast with **Undo** for a few seconds. Snooze offers
   tomorrow / 2 days / next Monday / a week or a date. Recently-closed loops are still watched for 5 days and reopen if the
   person comes back with a new question. Each card shows its one main action (draft chase, or done when it needs you);
   note, + link, + note and the auto-chase switch sit under **more ▾**.
-- **⚙ Settings** (bottom of the page): external-email chasing on/off, tone per seniority, people list, exclusions, and *Learn my tone*.
+- **⚙ Settings** (tab at the top) is six collapsed sections, so the one you need is a glance away: **Personal** (name, *Learn my
+  tone*, who's who, exclusions), **Chasing** (external on/off, draft or send, timer, tone per seniority), **Preferences** (AI,
+  model, refresh time), **History** (how far back it reads, what it writes to disk), **Connections** (to-do file, Miro board),
+  **App** (quit, start over). The browser remembers which sections you left open. *Save settings* stays pinned at the bottom.
 - **Update Slack** (next to Refresh, shown once Slack is connected) is a quick Slack-only pass: no email, about a
   third of the time. It keeps its own cursor, so the next full Refresh still picks up every email ask made in between.
 - **+ link** on a card attaches a document URL (Drive, Miro, Notion, Figma); the refresh also captures any document
   link it sees in the thread. Links show as chips; bare URLs typed into a note become clickable too.
 - **+ note** on a card pre-fills the *Needs me* form with that person and ask, for a reminder to yourself about it.
-- **Day log** (collapsed section under the lists): what moved today, straight from the tracker. *Write it up* asks the
+- **Day log**: what moved today, straight from the tracker. *Write it up* asks the
   AI to read today's sent messages and write a short first-person note (Done / Moved / Waiting on) with a copy button
   and a printable page. Nothing is sent.
-- **Roadmap** (collapsed section; needs Miro connected and a board + frame set in Settings): paste standup notes,
+- **Roadmap** (needs Miro connected and a board + frame set in Settings): paste standup notes,
   *Read these notes* turns them into rows with lane / column / owner, fix any mistakes, *Preview* shows what would be
   added, then *Add to the roadmap* (press twice within 6 s) adds one sticky note per row inside the frame. It never
   deletes, moves or edits anything on the board. *Read board* first so the lane and column choices match the frame.
@@ -200,7 +212,7 @@ state/logs/       one log per run
 5. **OneDrive / Dropbox folders** lock files while syncing. Install to the default `%LOCALAPPDATA%\OpenLoops`, not a
    synced folder.
 6. **Which model the jobs use.** Every job runs `claude -p` with `--model` and `--effort` from `model` and
-   `effort` in `config.json` (template: `sonnet` at `xhigh`; Settings → Your AI). Sonnet at xhigh or Opus at medium
+   `effort` in `config.json` (template: `sonnet` at `xhigh`; Settings → Preferences → Your AI). Sonnet at xhigh or Opus at medium
    both do the job. Leave either blank and the jobs inherit whatever `claude` defaults to on that computer, which
    is usually the most expensive model available. Grok ignores both.
 7. **Jobs never clobber your clicks.** A refresh can run for minutes; anything you add or snooze meanwhile is kept

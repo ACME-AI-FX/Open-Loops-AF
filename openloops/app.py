@@ -41,7 +41,9 @@ last_seen = time.time()
 # without a goodbye (browser crash, laptop closed) are forgotten after PAGE_STALE_S.
 pages = {}
 bye_at = 0.0
+STARTED = datetime.now().isoformat(timespec="seconds")
 quit_requested = False
+quit_now = False  # `--stop --now`: do not wait for a running job, cut it short
 PAGE_GRACE_S = 4
 PAGE_STALE_S = 15 * 60
 PEOPLEF = ROOT / "people_suggested.json"
@@ -76,6 +78,7 @@ doctor_cache = {"at": 0, "result": None}
 JOB_MOD = {"refresh": "refresh", "chase": "chase", "voice": "voice", "people": "people", "standing": "close_standing",
            "daylog": "daylog", "roadmap": "roadmap"}
 jobs = {k: {"running": False, "log": ""} for k in JOB_MOD}
+procs = {}  # name -> Popen while a job runs, so `--stop --now` can cut it short (jobs itself is sent as JSON)
 
 
 def load():
@@ -86,15 +89,43 @@ def save(s):
     write_json(STATE, s)
 
 
+def kill_tree(p):
+    """Stop a job and whatever it spawned (the claude CLI). Windows has no process groups: taskkill /T."""
+    try:
+        if sys.platform == "win32":
+            subprocess.run(["taskkill", "/T", "/F", "/PID", str(p.pid)], capture_output=True)
+        else:
+            import os, signal
+            os.killpg(p.pid, signal.SIGTERM)
+            try:
+                p.wait(3)
+            except subprocess.TimeoutExpired:  # a child that shrugs off TERM
+                os.killpg(p.pid, signal.SIGKILL)
+    except Exception:
+        pass  # already gone, or never ours: nothing left to stop
+
+
 def run_job(name, extra=None):
     if jobs[name]["running"]:
         return False
-    jobs[name] = {"running": True, "log": ""}
     args = [sys.executable, "-m", f"openloops.{JOB_MOD[name]}", *(extra or [])]
+    try:  # started here, not in the thread: a job the page sees as running always has a process /api/quit can stop
+        p = subprocess.Popen(args, cwd=ROOT, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True,
+                             encoding="utf-8", errors="replace", start_new_session=sys.platform != "win32")
+    except Exception as e:  # no interpreter, no permission: say so in the job log rather than hang as "running"
+        jobs[name] = {"running": False, "log": f"could not start {name}: {type(e).__name__}: {e}", "rc": -1}
+        return False
+    procs[name] = p
+    jobs[name] = {"running": True, "log": ""}
 
     def go():
-        p = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
-        jobs[name] = {"running": False, "log": (p.stdout + p.stderr)[-4000:], "rc": p.returncode}
+        try:
+            out, err = p.communicate()
+            jobs[name] = {"running": False, "log": (out + err)[-4000:], "rc": p.returncode}
+        except Exception as e:
+            jobs[name] = {"running": False, "log": f"{name} broke off: {type(e).__name__}: {e}", "rc": -1}
+        finally:
+            procs.pop(name, None)
 
     threading.Thread(target=go, daemon=True).start()
     return True
@@ -139,6 +170,15 @@ class H(BaseHTTPRequestHandler):
                         "pages": len(pages), "quitting": quit_requested})  # who is holding the server up
         elif self.path == "/api/config":
             self._json({"config": cfg(), "voice": read_json(VOICEF), "people_suggested": read_json(PEOPLEF)})
+        elif self.path == "/api/diag":  # what the Console's "Copy all" pastes: enough to debug from a screenshot-free report
+            c = cfg()
+            stamp = ROOT / "INSTALLED.txt"
+            dl = ROOT / "state" / "logs" / "doctor-last.log"
+            self._json({"python": sys.version.split()[0], "platform": sys.platform, "port": PORT, "root": str(ROOT),
+                        "build": stamp.read_text(encoding="utf-8").strip() if stamp.exists() else "checkout",
+                        "up_since": STARTED, "agent": c.get("agent") or "claude", "model": c.get("model") or "",
+                        "pages": len(pages), "jobs": {k: {"running": j["running"], "rc": j.get("rc"), "tail": (j.get("log") or "")[-1200:]} for k, j in jobs.items()},
+                        "doctor": doctor_cache["result"], "doctor_log": dl.read_text(encoding="utf-8", errors="replace")[-2000:] if dl.exists() else ""})
         elif self.path.split("?")[0] == "/api/daylog":
             from . import daylog
             q = self._query()
@@ -183,10 +223,17 @@ class H(BaseHTTPRequestHandler):
             pages.pop(str(body.get("page") or ""), None)
             bye_at = time.time()
             return self._json({"ok": True, "pages": len(pages)})
-        if self.path == "/api/quit":  # Settings button or `python -m openloops.app --stop`
-            global quit_requested
+        if self.path == "/api/quit":  # Settings button or `python -m openloops.app --stop [--now]`
+            global quit_requested, quit_now
             quit_requested = True
             busy = [k for k, j in jobs.items() if j["running"]]
+            if body.get("now") and busy:  # `npm run dev` restarting a dev session: a half-done refresh is not worth waiting for
+                for k in busy:
+                    if k in procs:
+                        kill_tree(procs[k])
+                self._json({"ok": True, "after_jobs": [], "cut_short": busy})
+                quit_now = True  # only once the answer is out: the reaper stops the server the moment it sees this
+                return
             return self._json({"ok": True, "after_jobs": busy})
         if self.path == "/api/refresh":
             return self._json({"started": run_job("refresh", ["--slack-only"] if body.get("slack_only") else None)})
@@ -222,11 +269,28 @@ class H(BaseHTTPRequestHandler):
             import time as _t
             if body.get("force") or _t.time() - doctor_cache["at"] > 55:
                 args = [sys.executable, "-m", "openloops.doctor"] + (["--detect"] if body.get("detect") else [])
-                r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace")
+                for attempt in (1, 2):  # a check that produced nothing gets one quiet retry before anyone hears about it
+                    try:
+                        r = subprocess.run(args, cwd=ROOT, capture_output=True, text=True, encoding="utf-8", errors="replace",
+                                           stdin=subprocess.DEVNULL, timeout=240)
+                        out, err, rc = r.stdout, r.stderr, r.returncode
+                    except Exception as e:  # timeout, or the interpreter could not be started
+                        out, err, rc = "", f"{type(e).__name__}: {e}", -1
+                    if out.strip():
+                        break
+                    _t.sleep(2)
                 try:
-                    doctor_cache = {"at": _t.time(), "result": json.loads(r.stdout.strip().splitlines()[-1])}
+                    (ROOT / "state" / "logs").mkdir(parents=True, exist_ok=True)
+                    (ROOT / "state" / "logs" / "doctor-last.log").write_text(
+                        chr(10).join(["$ " + " ".join(args), "rc=" + str(rc), "--- stdout ---", out, "--- stderr ---", err]), encoding="utf-8")
+                except OSError:
+                    pass
+                try:
+                    doctor_cache = {"at": _t.time(), "result": json.loads(out.strip().splitlines()[-1])}
                 except Exception:
-                    doctor_cache = {"at": _t.time(), "result": {"all_ok": False, "steps": [{"id": "err", "ok": False, "title": "Check failed", "fix": (r.stdout + r.stderr)[-300:]}]}}
+                    why = (out + err).strip()[-300:] or f"the check produced no output (exit code {rc})"
+                    # not a connection problem: the checker itself did not answer. The page keeps its last good answer.
+                    doctor_cache = {"at": _t.time(), "result": {"all_ok": False, "error": why, "steps": [], "rc": rc}}
             return self._json(doctor_cache["result"])
         if self.path == "/api/open-claude":
             # opens a terminal running the configured agent so the user can sign in / connect
@@ -353,6 +417,11 @@ class H(BaseHTTPRequestHandler):
                             return self._json({"error": str(e)}, 400)
                     elif act == "unsnooze":
                         lp["snooze_until"] = None
+                    elif act == "priority":
+                        pr = body.get("priority")
+                        if pr not in ("high", "normal", "low"):
+                            return self._json({"error": "priority is high, normal or low"}, 400)
+                        lp["priority"], lp["priority_by"] = pr, "you"
                     elif act == "auto_off":
                         lp["auto_off"] = True
                     elif act == "auto_on":
@@ -404,20 +473,22 @@ def pick_port(start=None):
     raise SystemExit(f"Open Loops: no free port between {start} and {start + 19}; set OPENLOOPS_PORT")
 
 
-def stop_running():
-    """`python -m openloops.app --stop`: ask the running instance (if any) to quit. Exit 0 if one was told."""
+def stop_running(now=False):
+    """`python -m openloops.app --stop`: ask the running instance (if any) to quit. Exit 0 if one was told.
+    `--now` also cuts a running job short instead of waiting for it (what `npm run dev` uses to restart)."""
     import urllib.request
     from concurrent.futures import ThreadPoolExecutor
     with ThreadPoolExecutor(20) as ex:  # probe the whole range at once: closed ports take the full timeout each
         busy = [p for p, b in zip(range(PORT, PORT + 20), ex.map(port_busy, range(PORT, PORT + 20))) if b]
     for p in busy:
         if already_running(p):
-            req = urllib.request.Request(f"http://127.0.0.1:{p}/api/quit", data=b"{}",
+            req = urllib.request.Request(f"http://127.0.0.1:{p}/api/quit", data=json.dumps({"now": now}).encode(),
                                          headers={"Content-Type": "application/json"}, method="POST")
             with urllib.request.urlopen(req, timeout=5) as r:
                 out = json.loads(r.read() or b"{}")
-            after = out.get("after_jobs") or []
-            print(f"Open Loops on port {p}: stopping" + (f" once {', '.join(after)} finishes" if after else ""))
+            after, cut = out.get("after_jobs") or [], out.get("cut_short") or []
+            print(f"Open Loops on port {p}: stopping" + (f" once {', '.join(after)} finishes" if after else "")
+                  + (f" ({', '.join(cut)} cut short)" if cut else ""))
             return 0
     print("Open Loops is not running")
     return 1
@@ -425,7 +496,7 @@ def stop_running():
 
 if __name__ == "__main__":
     if "--stop" in sys.argv:
-        sys.exit(stop_running())
+        sys.exit(stop_running(now="--now" in sys.argv))
     PORT, running = pick_port()
     url = f"http://localhost:{PORT}"
     def open_browser():
@@ -456,7 +527,7 @@ if __name__ == "__main__":
             for pid, seen in list(pages.items()):
                 if now - seen > PAGE_STALE_S:
                     pages.pop(pid, None)
-            if any(j["running"] for j in jobs.values()):
+            if any(j["running"] for j in jobs.values()) and not quit_now:
                 continue  # never pull the rug from under a refresh/chase; check again once it is done
             no_pages = bye_at and not pages and now - bye_at > PAGE_GRACE_S and now - last_seen > PAGE_GRACE_S
             if quit_requested or no_pages or now - last_seen > IDLE_EXIT_S:
