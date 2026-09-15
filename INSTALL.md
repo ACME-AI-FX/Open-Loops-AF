@@ -100,6 +100,9 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
   *Read these notes* turns them into rows with lane / column / owner, fix any mistakes, *Preview* shows what would be
   added, then *Add to the roadmap* (press twice within 6 s) adds one sticky note per row inside the frame. It never
   deletes, moves or edits anything on the board. *Read board* first so the lane and column choices match the frame.
+  The section ends with a live, view-only embed of the board opened on that frame (put the board *link* in Settings,
+  not just its name, to get it before the first read). Miro's plan sets a daily cap on tool calls (Free 100, Starter
+  500, Business 2,000); a read + preview + build is roughly 20-40 calls.
 
 ## 4. Rules the tool follows (worth telling whoever installs it)
 

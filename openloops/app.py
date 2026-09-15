@@ -133,7 +133,10 @@ class H(BaseHTTPRequestHandler):
             self.wfile.write(b)
         elif self.path == "/api/roadmap":
             from . import roadmap
-            self._json({"store": roadmap.load(), "configured": roadmap.configured(),
+            st, conf = roadmap.load(), roadmap.configured()
+            # the board may be known by link from Settings before it has ever been read
+            embed = roadmap.embed_url(st["board"].get("url") or conf["board"], st["board"].get("frame_id"))
+            self._json({"store": st, "configured": conf, "embed": embed,
                         "miro": bool((doctor_cache.get("result") or {}).get("miro"))})
         else:
             self._json({"error": "not found"}, 404)

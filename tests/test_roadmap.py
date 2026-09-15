@@ -29,7 +29,7 @@ roadmap.LOG = tmp / "logs"
 try:
     d = roadmap.load()
     check(set(d) == {"rows", "pasted", "updated_at", "board", "preview"}, "load() has every top-level key")
-    check(set(d["board"]) == {"name", "url", "frame", "lanes", "columns", "read_at", "existing"}, "board shape")
+    check(set(d["board"]) == {"name", "url", "frame", "frame_id", "lanes", "columns", "read_at", "existing"}, "board shape")
     check(set(d["preview"]) == {"at", "plan"} and d["rows"] == [], "preview shape, no rows")
 
     r = roadmap.normalise_row({"title": "  Fix layout tool ", "state": "bogus", "owners": "Rafe"})
@@ -63,6 +63,13 @@ try:
         raise SystemExit("FAIL: unconfigured read did not exit")
     except SystemExit as e:
         check(e.code == 2, "unconfigured board exits 2")
+    check(roadmap.board_id("https://miro.com/app/board/uXjVK1abc=/") == "uXjVK1abc=", "board_id from a board link")
+    check(roadmap.board_id("https://miro.com/app/board/uXjVK1abc=/?share_link_id=1") == "uXjVK1abc=", "board_id ignores the query string")
+    check(roadmap.board_id("Planning & Roadmap") == "", "board_id empty for a board name")
+    check(roadmap.embed_url("Planning") == "", "embed_url empty until the board is known by link")
+    e = roadmap.embed_url("https://miro.com/app/board/uXjVK1abc=/", "3074457350605242225")
+    check(e == "https://miro.com/app/live-embed/uXjVK1abc=/?autoplay=true&embedMode=view_only_without_ui&moveToWidget=3074457350605242225", "embed_url focuses the frame")
+    check("moveToWidget" not in roadmap.embed_url("https://miro.com/app/board/uXjVK1abc=/"), "embed_url without a frame id shows the whole board")
     say("all good")
 finally:
     shutil.rmtree(tmp, ignore_errors=True)

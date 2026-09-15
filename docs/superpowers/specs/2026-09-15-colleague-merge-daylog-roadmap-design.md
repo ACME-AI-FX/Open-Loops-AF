@@ -102,6 +102,21 @@ Modes (`python -m openloops.roadmap <mode>`), each an unattended agent run:
 
 Row staging (`save` mode) is handled in app.py without an agent.
 
+**Live Embed.** The Roadmap card ends with a collapsed "Board (live, view only)" section holding a
+Miro Live Embed iframe (`https://miro.com/app/live-embed/<board id>/?autoplay=true&embedMode=view_only_without_ui&moveToWidget=<frame id>`).
+Free, no token, loads only when opened. The board id comes from the board link (Settings or the
+`read` result); the frame id comes from `read`. `roadmap.embed_url()` builds it; `/api/roadmap` returns it as `embed`.
+
+**Why MCP and not the REST API (decision 2026-09-15).** MCP needs no app registration or token
+store and uses the user's own board permissions; its costs are model-driven placement and a daily
+tool-call cap (Free 100, Starter 500, Business 2,000, Enterprise 10,000+ and admin-enabled). The REST
+API is deterministic (list frame children with positions, create a sticky note with x/y and parent
+frame) and effectively unlimited, but needs a Miro developer app plus a per-user OAuth token store
+like `gmail_auth.py`. The Web SDK runs inside Miro and cannot be driven from the local page.
+**Fallback rule:** keep `read` / `preview` / `build` as the interface; if after real use cards land
+in the wrong cell more than about one run in five, or the daily cap blocks a build, re-implement
+`read` and `build` on the REST API behind the same modes. Parsing stays with the agent either way.
+
 ### app.py
 
 - Helpers from store; `snooze` uses `norm_date` and returns 400 on a bad date.

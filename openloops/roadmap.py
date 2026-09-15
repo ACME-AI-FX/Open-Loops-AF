@@ -41,7 +41,7 @@ inside the grid, give its text and the lane and column it sits in.
 
 Reply with ONLY a JSON object between the markers, nothing else:
 <<<ROADMAP>>>
-{{"board_url": "https://miro.com/app/board/...", "frame_title": "{frame}",
+{{"board_url": "https://miro.com/app/board/...", "frame_title": "{frame}", "frame_id": "<the frame item's id>",
   "lanes": ["lane name", "..."], "columns": ["column name", "..."],
   "existing": [{{"title": "card text", "lane": "lane name", "column": "column name"}}]}}
 <<<END>>>
@@ -108,7 +108,7 @@ Reply with ONLY a JSON object between the markers, nothing else:
 
 def _default():
     return {"rows": [], "pasted": "", "updated_at": "",
-            "board": {"name": "", "url": "", "frame": "", "lanes": [], "columns": [],
+            "board": {"name": "", "url": "", "frame": "", "frame_id": "", "lanes": [], "columns": [],
                       "read_at": "", "existing": []},
             "preview": {"at": "", "plan": []}}
 
@@ -178,6 +178,25 @@ def merge_rows(existing, parsed):
     return out
 
 
+def board_id(url):
+    """'https://miro.com/app/board/uXjVK1abc=/' -> 'uXjVK1abc='. Empty when it is not a board link."""
+    m = re.search(r"miro\.com/app/(?:board|live-embed)/([^/?#]+)", str(url or ""))
+    return m.group(1) if m else ""
+
+
+def embed_url(board_url, frame_id=""):
+    """Live Embed URL for the page's view-only iframe: the board, opened on the roadmap frame.
+    Free, no token; the viewer needs normal access to the board (they are signed in to Miro anyway).
+    Empty when the board is not known by link yet."""
+    bid = board_id(board_url)
+    if not bid:
+        return ""
+    url = f"https://miro.com/app/live-embed/{bid}/?autoplay=true&embedMode=view_only_without_ui"
+    if frame_id:
+        url += f"&moveToWidget={frame_id}"
+    return url
+
+
 def configured():
     cfg = store.load_cfg()
     board = str(cfg.get("roadmap_board") or "").strip()
@@ -225,6 +244,7 @@ def main(mode, confirm=False):
     if mode == "read":
         out = _ask(mode, READ_PROMPT.format(name=name, board=c["board"], frame=c["frame"]), MIRO_TOOLS)
         b.update({"url": str(out.get("board_url") or b.get("url") or ""),
+                  "frame_id": str(out.get("frame_id") or b.get("frame_id") or ""),
                   "lanes": [str(x) for x in out.get("lanes") or []],
                   "columns": [str(x) for x in out.get("columns") or []],
                   "existing": [{"title": str(e.get("title") or ""), "lane": str(e.get("lane") or ""),

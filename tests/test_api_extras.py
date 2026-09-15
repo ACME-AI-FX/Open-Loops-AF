@@ -150,6 +150,9 @@ try:
     check(code == 400 and "confirm" in err.get("error", ""), "build without confirm is refused even when configured")
     cfg = json.loads((tmp / "config.json").read_text(encoding="utf-8-sig"))
     check(cfg["roadmap_board"] == "Planning" and cfg["roadmap_frame"] == "Roadmap Sep 2026", "board and frame saved from Settings")
+    check(api("/api/roadmap")[1]["embed"] == "", "no live embed while the board is only known by name")
+    api("/api/config", {"roadmap_board": "https://miro.com/app/board/uXjVK1abc=/"})
+    check(api("/api/roadmap")[1]["embed"].startswith("https://miro.com/app/live-embed/uXjVK1abc=/"), "a board link in Settings gives the page a live embed url")
 
     # ---- page has the new controls
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
