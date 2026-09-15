@@ -8,6 +8,14 @@ rem    A git checkout is never an installed copy: developers use `npm run dev` o
 setlocal
 set "HERE=%~dp0"
 if exist "%HERE%openloops\app.py" if exist "%HERE%config.json" if not exist "%HERE%.git" (
+    rem Same check as the branch below. No `python` fallback: Windows ships a Store stub python.exe (but no
+    rem pythonw.exe), so on a machine with no Python `where python` succeeds and would open the Store instead.
+    where pythonw >nul 2>&1
+    if errorlevel 1 (
+        echo Python was not found on this computer's PATH. Run setup.ps1 again, or install Python from python.org and tick "Add to PATH".
+        pause
+        exit /b 1
+    )
     cd /d "%HERE%"
     start "" pythonw -m openloops.app
     exit /b 0
