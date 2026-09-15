@@ -84,6 +84,9 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 - Double-click **Open Loops** → page opens at http://localhost:8765 (already refreshed by the morning job).
   If another program already uses port 8765, Open Loops picks the next free port and opens the browser
   there instead; set `OPENLOOPS_PORT` if you want a fixed one.
+- **Pinned** (top of Home): the boards and docs you open every day, yours rather than a loop's. *+ pin* takes any
+  link; a Miro board chip also gets a ▣ that opens the board right there, read-only (Miro's free live embed, no
+  API call). Stored as `pinned_links` in config.json; unpin with × (Undo for a few seconds).
 - **Your own to-do file (optional)**: Settings → Connections. Point it at a markdown file you already keep (or press
   *Create a starter file there*). Open lines appear under Needs me; pressing done asks how you closed the item and
   writes that back. The format and everything else Open Loops logs are listed under that setting. The old

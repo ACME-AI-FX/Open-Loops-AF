@@ -14,7 +14,7 @@ STATE = ROOT / "state.json"
 INDEX = PKG / "index.html"
 CONFIG = ROOT / "config.json"
 VOICEF = ROOT / "voice.json"
-EDITABLE = ("agent", "model", "effort", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "standing_file", "slack_source", "miro_source", "roadmap_board", "roadmap_frame")
+EDITABLE = ("agent", "model", "effort", "use_slack", "history_days", "owner_name", "chase_external_email", "send_internal", "send_external", "internal_domains", "auto_chase", "tone", "people", "exclude_people", "exclude_topics", "voice_sample_people", "escalation", "vault_path", "standing_file", "pinned_links", "slack_source", "miro_source", "roadmap_board", "roadmap_frame")
 import os
 PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
 WIN = sys.platform == "win32"
@@ -250,6 +250,15 @@ class H(BaseHTTPRequestHandler):
             return self._json({"started": run_job("people")})
         if self.path == "/api/config":
             c = cfg()
+            if "pinned_links" in body:  # http(s) only, one entry per url, label trimmed
+                seen, clean = set(), []
+                for p in body.get("pinned_links") or []:
+                    u = str((p or {}).get("url") or "").strip()
+                    if not u.lower().startswith(("http://", "https://")) or u in seen:
+                        continue
+                    seen.add(u)
+                    clean.append({"url": u, "label": str((p or {}).get("label") or "").strip()[:60]})
+                body["pinned_links"] = clean
             for k, v in body.items():
                 if k in EDITABLE:
                     c[k] = v

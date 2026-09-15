@@ -190,10 +190,20 @@ try:
     check(api("/api/standing")[1]["open"] == 1 and "vault-A9" in [l["id"] for l in api("/api/state")[1]["state"]["loops"]], "legacy vault_path folder still resolves")
     api("/api/config", {"vault_path": ""})
 
+    # ---- pinned links: http only, de-duplicated, label capped, round-trips through config
+    api("/api/config", {"pinned_links": [{"url": "https://miro.com/app/board/uXjVK1abc=/", "label": " Planning "},
+                                         {"url": "https://miro.com/app/board/uXjVK1abc=/", "label": "dup"},
+                                         {"url": "javascript:alert(1)", "label": "bad"}, {"url": "https://docs.google.com/d/9", "label": "x" * 80}]})
+    pl = api("/api/config")[1]["config"]["pinned_links"]
+    check([p["url"] for p in pl] == ["https://miro.com/app/board/uXjVK1abc=/", "https://docs.google.com/d/9"], "pins keep http links once each, drop the rest")
+    check(pl[0]["label"] == "Planning" and len(pl[1]["label"]) == 60, "pin labels are trimmed and capped")
+    api("/api/config", {"pinned_links": []})
+    check(api("/api/config")[1]["config"]["pinned_links"] == [], "pins can be cleared")
+
     # ---- page has the new controls
     html = (tmp / "openloops" / "index.html").read_text(encoding="utf-8")
     check("x.id==='self'&&x.ok" in html, "Update Slack is shown only when Slack is connected and the owner's id is known")
-    for needle in ('id="uslack"', 'id="cfg_model"', 'id="cfg_effort"', 'id="cfg_standing"', 'standingCreate(', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
+    for needle in ('id="uslack"', 'id="cfg_model"', 'id="cfg_effort"', 'id="cfg_standing"', 'standingCreate(', 'id="pins"', 'pinEmbed(', "linkify(", "addLink(", "noteFor(", 'id="dl_run"', 'id="rm_postbtn"', 'id="cfg_rm_board"'):
         check(needle in html, f"page has {needle}")
     say("ALL OK")
 finally:

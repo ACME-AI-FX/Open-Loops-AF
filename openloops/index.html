@@ -97,6 +97,16 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
  <div id="st_auto" class="box" style="display:none"><h3 id="auto_title"></h3><div class="sub" id="auto_sub"></div><div style="margin-top:10px"><button id="auto_retry" onclick="retryStage()" style="display:none">Try again</button></div></div>
 
  <div id="lists">
+  <!-- Pinned: the boards and docs you open every day, yours rather than a loop's. Miro boards can open in a view-only embed here. -->
+  <div id="pins_wrap" style="display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:0 0 4px">
+   <span class="sub" style="letter-spacing:.08em;text-transform:uppercase;font-size:11px;margin-right:4px">Pinned</span>
+   <span id="pins"></span>
+   <button class="quiet" onclick="pinAdd()" title="pin a board or document you open often">+ pin</button>
+  </div>
+  <div id="pin_embed_wrap" style="display:none;margin:0 0 14px">
+   <div class="sub" style="display:flex;gap:8px;align-items:center;margin-bottom:4px"><span id="pin_embed_title"></span><a id="pin_embed_open" href="#" target="_blank" rel="noopener">open in Miro</a><button class="quiet" onclick="pinEmbed(null)">close</button></div>
+   <iframe id="pin_embed" style="width:100%;height:520px;border:1px solid var(--line);border-radius:6px;background:var(--bg)" allow="fullscreen; clipboard-read; clipboard-write" referrerpolicy="no-referrer-when-downgrade"></iframe>
+  </div>
   <h2>Needs me <span id="n1"></span></h2>
   <div class="box" id="add_need" style="padding:10px 12px">
    <div class="sub" style="margin-bottom:8px">Add something you need to do for someone. It stays here until you mark it done — Refresh does not close these.</div>
@@ -423,7 +433,7 @@ function renderLists(){if(!S)return;const L=S.loops||[];const live=l=>l.status!=
  $('#needs').innerHTML=needs.map(l=>card(l)).join('')||'<div class="empty">nothing waiting on you</div>';
  $('#waiting').innerHTML=wait.map(l=>card(l)).join('')||'<div class="empty">nothing outstanding</div>';
  $('#rest').innerHTML=rest.map(l=>card(l,true)).join('');
- $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`;
+ $('#n1').textContent=`(${needs.length})`;$('#n2').textContent=`(${wait.length})`;paintPins();
  const dl=$('#need_people');if(dl)dl.innerHTML=Object.keys((C&&C.people)||{}).sort().map(n=>`<option value="${esc(n)}">`).join('')}
 const who=l=>l?((l.owner?l.owner+' — ':'')+(l.ask||'')).slice(0,60):'';
 // every card action: card dims at once (pending), then a toast says what happened; done/snooze/reopen offer Undo
@@ -447,6 +457,24 @@ function addLink(id){const l=S.loops.find(x=>x.id===id);if(!l)return;
  dlgOpen({title:'Attach a link',sub:who(l),ok:'Add link',fields:[{id:'url',label:'Link (Drive, Miro, Notion, Figma…)',type:'url',placeholder:'https://…'},{id:'label',label:'Label (optional)',placeholder:'e.g. brief v2'}],
   onOk:async()=>{const u=dlgVal('url');if(!/^https?:\/\//i.test(u))throw new Error('the link must start with http:// or https://');await act(id,'add_link',{url:u,label:dlgVal('label')})}})}
 function dropLink(id,url){act(id,'drop_link',{url})}
+
+// ---------- pinned links: yours, not a loop's. Stored in config.pinned_links; Miro boards can open in a view-only embed ----------
+const pins=()=>(C&&Array.isArray(C.pinned_links)?C.pinned_links:[]);
+const miroBoard=u=>{const m=/miro\.com\/app\/(?:board|live-embed)\/([^/?#]+)/.exec(u||'');return m?m[1]:''};
+let pinShown=null;
+function paintPins(){const el=$('#pins');if(!el||!C)return;
+ el.innerHTML=pins().map(p=>`<a class="chip" href="${esc(p.url)}" target="_blank" rel="noopener" title="${esc(p.url)}"><span>${esc(p.label||host(p.url))}</span>${miroBoard(p.url)?`<button type="button" aria-label="view here" title="view here, read-only" onclick="event.preventDefault();pinEmbed('${esc(p.url)}')">▣</button>`:''}<button type="button" aria-label="unpin" title="unpin" onclick="event.preventDefault();pinDrop('${esc(p.url)}')">×</button></a>`).join('')||'<span class="sub">nothing pinned yet - boards and docs you open every day</span>';
+ if(pinShown&&!pins().some(p=>p.url===pinShown))pinEmbed(null)}
+async function savePins(list,msg,undo){const prev=pins();try{await api('/api/config',{pinned_links:list});await loadCfg();paintPins();if(msg)toast(msg,undo?{undo:()=>savePins(prev)}:undefined)}
+ catch(e){toast('Pins not saved: '+e.message.replace(/^.*-> \d+ /,''),{err:true});throw e}}
+function pinAdd(){dlgOpen({title:'Pin a board or document',sub:'Shown at the top of Home. Miro boards can also open here, read-only.',ok:'Pin',
+ fields:[{id:'url',label:'Link',type:'url',placeholder:'https://miro.com/app/board/…  or any document link'},{id:'label',label:'Label (optional)',placeholder:'e.g. Planning board'}],
+ onOk:async()=>{const u=dlgVal('url');if(!/^https?:\/\//i.test(u))throw new Error('the link must start with http:// or https://');if(pins().some(p=>p.url===u))throw new Error('already pinned');
+  await savePins(pins().concat([{url:u,label:dlgVal('label')}]),'Pinned: '+(dlgVal('label')||host(u)))}})}
+function pinDrop(url){const p=pins().find(x=>x.url===url);savePins(pins().filter(x=>x.url!==url),'Unpinned: '+((p&&p.label)||host(url)),true)}
+function pinEmbed(url){const w=$('#pin_embed_wrap'),f=$('#pin_embed');if(!url||url===pinShown){pinShown=null;w.style.display='none';f.removeAttribute('src');return}
+ const p=pins().find(x=>x.url===url)||{url};pinShown=url;$('#pin_embed_title').textContent=p.label||host(url);$('#pin_embed_open').href=url;
+ f.setAttribute('src',`https://miro.com/app/live-embed/${miroBoard(url)}/?autoplay=true&embedMode=view_only_without_ui`);w.style.display='';w.scrollIntoView({behavior:'smooth',block:'nearest'})}
 function noteFor(id){const l=S.loops.find(x=>x.id===id);if(!l)return;$('#need_who').value=l.owner||'';$('#need_ask').value='';$('#need_notes').value='re: '+(l.ask||'');
  $('#add_need').scrollIntoView({behavior:'smooth',block:'center'});$('#need_ask').focus()}
 function closeVault(id){const l=S.loops.find(x=>x.id===id);if(!l)return;

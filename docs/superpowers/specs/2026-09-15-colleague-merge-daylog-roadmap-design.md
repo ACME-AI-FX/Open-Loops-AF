@@ -197,6 +197,11 @@ Single role: the owner. Primary goal: see what needs me and what is stuck, act o
   there and how many open items it has as you type, offers "Create a starter file there", and folds the line
   format plus a list of everything else Open Loops writes to disk under a details toggle. Cards say
   "from <file name>" instead of naming a personal repo.
+- **Pinned (Similarity / Fitts distance)**: a strip of chips at the top of Home for links that belong to the
+  owner rather than to a loop (`config.pinned_links`, http only, one per url, label ≤ 60). Added through the same
+  link dialog as card links; unpin has Undo. A Miro board chip gets a ▣ that opens the board in the same
+  view-only live embed the Roadmap uses, one at a time, with "open in Miro" and "close" beside it. One pattern
+  for Miro, Drive, Notion and the rest instead of a Miro-only button.
 
 ## Out of scope
 
