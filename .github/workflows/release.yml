@@ -1,0 +1,96 @@
+# Builds the two downloadable installers and, on a version tag, attaches them to a GitHub Release.
+#
+#   git tag v0.2 && git push origin v0.2
+#     -> OpenLoops-Setup.exe and OpenLoops.dmg on https://github.com/<repo>/releases/tag/v0.2
+#     -> stable links: https://github.com/<repo>/releases/latest/download/OpenLoops-Setup.exe
+#                      https://github.com/<repo>/releases/latest/download/OpenLoops.dmg
+#
+# "Run workflow" on any branch builds both installers as workflow artifacts (no release); those
+# installers download that branch when run - handy for testing a branch on a clean machine.
+#
+# The installers do not contain the app. They download the tagged (or branch) source from GitHub
+# when the person runs them, so the payload always matches the tag the installer was built from.
+name: Build installers
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.v.outputs.version }}
+      ref: ${{ steps.v.outputs.ref }}
+    steps:
+      - id: v
+        shell: bash
+        run: |
+          if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
+          fi
+          echo "ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"
+
+  windows:
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build OpenLoops-Setup.exe
+        shell: pwsh
+        run: |
+          & "C:\Program Files (x86)\Inno Setup 6\ISCC.exe" `
+            "/DAppVersion=${{ needs.version.outputs.version }}" `
+            "/DRef=${{ needs.version.outputs.ref }}" `
+            packaging\windows\OpenLoops.iss
+          Get-Item dist\OpenLoops-Setup.exe
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenLoops-Setup.exe
+          path: dist/OpenLoops-Setup.exe
+          if-no-files-found: error
+
+  macos:
+    needs: version
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build OpenLoops.dmg
+        run: |
+          bash packaging/macos/build-dmg.sh \
+            --ref "${{ needs.version.outputs.ref }}" \
+            --version "${{ needs.version.outputs.version }}" \
+            --out dist/OpenLoops.dmg
+          ls -l dist
+      - uses: actions/upload-artifact@v4
+        with:
+          name: OpenLoops.dmg
+          path: dist/OpenLoops.dmg
+          if-no-files-found: error
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist
+          merge-multiple: true
+      - name: Create or update the GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          ls -l dist
+          if gh release view "$GITHUB_REF_NAME" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release upload "$GITHUB_REF_NAME" dist/OpenLoops-Setup.exe dist/OpenLoops.dmg --clobber --repo "$GITHUB_REPOSITORY"
+          else
+            gh release create "$GITHUB_REF_NAME" dist/OpenLoops-Setup.exe dist/OpenLoops.dmg \
+              --repo "$GITHUB_REPOSITORY" --title "Open Loops $GITHUB_REF_NAME" --generate-notes
+          fi

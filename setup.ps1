@@ -2,16 +2,18 @@
   Open Loops - one-click installer for Windows.
   Right-click this file -> "Run with PowerShell". Or from a terminal:
       powershell -ExecutionPolicy Bypass -File setup.ps1
+  The downloadable OpenLoops-Setup.exe (packaging/windows) fetches the repo and runs this with
+      -Dest "<install folder>" -Name <first name> -At HH:MM -NoLaunch
 
   What it does (all on this computer, nothing sent anywhere):
     1. Installs Python and Claude Code if they're missing (using Windows' own installer, winget).
-    2. Copies Open Loops to your user folder.
-    3. Puts an "Open Loops" icon on your Desktop.
+    2. Copies Open Loops to your user folder (%LOCALAPPDATA%\OpenLoops, or -Dest).
+    3. Puts an "Open Loops" icon on your Desktop and in the Start menu.
     4. Sets it to refresh every weekday morning (default 09:15).
     5. Opens the app - which walks you through connecting Slack and email.
 #>
 [CmdletBinding()]
-param([string]$At = "09:15", [string]$Name = "")
+param([string]$At = "09:15", [string]$Name = "", [string]$Dest = "", [switch]$NoLaunch)
 
 $ErrorActionPreference = "Stop"
 function Say($t) { Write-Host ""; Write-Host "  $t" -ForegroundColor Cyan }
@@ -53,7 +55,8 @@ $Src  = $PSScriptRoot
 # Install into the user's local app-data folder - no admin rights needed, and it works wherever the
 # download was unzipped (Downloads, Desktop, a USB stick). The Desktop icon points here, so the
 # downloaded folder can be deleted afterwards.
-$Dest = Join-Path $env:LOCALAPPDATA "OpenLoops"
+if (-not $Dest) { $Dest = Join-Path $env:LOCALAPPDATA "OpenLoops" }
+$Dest = [IO.Path]::GetFullPath($Dest)
 if ((Resolve-Path $Src).Path -eq $Dest) { Say "Already installed here - updating." }
 Say "Installing Open Loops to $Dest ..."
 New-Item -ItemType Directory -Force $Dest | Out-Null
@@ -78,23 +81,30 @@ if (-not (Test-Path $CfgFile)) {
 }
 Ok "Files in place"
 
-# ---------- 4. Desktop icon ----------
-$desk = [Environment]::GetFolderPath("Desktop")
+# ---------- 4. Desktop + Start menu icons ----------
 $pyw  = (Get-Command pythonw -ErrorAction SilentlyContinue).Source
 if (-not $pyw) { $pyw = (Get-Command python).Source }
+$ico  = Join-Path $Dest "docs\AppIcon.ico"
 $ws = New-Object -ComObject WScript.Shell
-$s = $ws.CreateShortcut((Join-Path $desk "Open Loops.lnk"))
-$s.TargetPath = $pyw; $s.Arguments = "-m openloops.app"; $s.WorkingDirectory = $Dest
-$s.IconLocation = "%SystemRoot%\System32\shell32.dll,44"; $s.Description = "Open Loops - who owes you a reply"; $s.Save()
-Ok "Desktop icon created"
+foreach ($folder in @([Environment]::GetFolderPath("Desktop"), [Environment]::GetFolderPath("Programs"))) {
+    $s = $ws.CreateShortcut((Join-Path $folder "Open Loops.lnk"))
+    $s.TargetPath = $pyw; $s.Arguments = "-m openloops.app"; $s.WorkingDirectory = $Dest
+    if (Test-Path $ico) { $s.IconLocation = "$ico,0" } else { $s.IconLocation = "%SystemRoot%\System32\shell32.dll,44" }
+    $s.Description = "Open Loops - who owes you a reply"; $s.Save()
+}
+Ok "Desktop and Start menu icons created"
 
 # ---------- 5. Morning refresh ----------
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Dest "scripts\register-task.ps1") -At $At | Out-Null
 Ok "Will refresh itself weekdays at $At"
 
 # ---------- 6. Open it ----------
-Say "Opening Open Loops - it will guide you through connecting Slack and email."
-Start-Process -FilePath $pyw -ArgumentList "-m openloops.app" -WorkingDirectory $Dest
+if ($NoLaunch) {
+    Ok "Installed. Open Loops will guide you through connecting Slack and email when you first open it."
+} else {
+    Say "Opening Open Loops - it will guide you through connecting Slack and email."
+    Start-Process -FilePath $pyw -ArgumentList "-m openloops.app" -WorkingDirectory $Dest
+}
 Write-Host ""
 Write-Host "  Done. You can close this window." -ForegroundColor Green
 Write-Host ""
