@@ -64,6 +64,12 @@ Say "Installing Open Loops to $Dest ..."
 New-Item -ItemType Directory -Force $Dest | Out-Null
 if ((Resolve-Path $Src).Path -ne $Dest) {
     Get-ChildItem $Src -Exclude "state","voice.json","state.json","config.json","people_suggested.json",".git","docs","tests",".worktrees" | Copy-Item -Destination $Dest -Recurse -Force
+    # docs\ is skipped above (website + screenshots), but the shortcut icon lives there.
+    $srcIco = Join-Path $Src "docs\AppIcon.ico"
+    if (Test-Path $srcIco) {
+        New-Item -ItemType Directory -Force (Join-Path $Dest "docs") | Out-Null
+        Copy-Item $srcIco (Join-Path $Dest "docs\AppIcon.ico") -Force
+    }
 }
 New-Item -ItemType Directory -Force (Join-Path $Dest "state\logs") | Out-Null
 
@@ -74,12 +80,6 @@ if (-not (Test-Path $StateFile)) {
     @{ cursor = $cursor; last_refresh = $null; loops = @() } | ConvertTo-Json | ForEach-Object { [IO.File]::WriteAllText($StateFile, $_, (New-Object Text.UTF8Encoding $false)) }  # no BOM - Python json refuses it
 }
 $CfgFile = Join-Path $Dest "config.json"
-if (-not (Test-Path $CfgFile)) {
-    while (-not $Name) { $Name = (Read-Host "  Your first name (used so messages sound like you)").Trim() }
-    $tpl = Get-Content (Join-Path $Src "config.template.json") -Raw | ConvertFrom-Json
-    $tpl.owner_name   = $Name
-    $tpl.refresh_time = $At
-    $tpl | ConvertTo-Json -Depth 6 | ForEach-Object { [IO.File]::WriteAllText($CfgFile, $_, (New-Object Text.UTF8Encoding $false)) }
 if (Test-Path $CfgFile) {
     # Updating: the person's own refresh time wins unless a new one was asked for explicitly.
     $cfg = Get-Content $CfgFile -Raw | ConvertFrom-Json
@@ -90,6 +90,12 @@ if (Test-Path $CfgFile) {
         $At = $cfg.refresh_time
     }
 }
+if (-not (Test-Path $CfgFile)) {
+    while (-not $Name) { $Name = (Read-Host "  Your first name (used so messages sound like you)").Trim() }
+    $tpl = Get-Content (Join-Path $Src "config.template.json") -Raw | ConvertFrom-Json
+    $tpl.owner_name   = $Name
+    $tpl.refresh_time = $At
+    $tpl | ConvertTo-Json -Depth 6 | ForEach-Object { [IO.File]::WriteAllText($CfgFile, $_, (New-Object Text.UTF8Encoding $false)) }
 }
 Ok "Files in place"
 
@@ -108,17 +114,17 @@ Ok "Desktop and Start menu icons created"
 
 # ---------- 5. Morning refresh ----------
 powershell -NoProfile -ExecutionPolicy Bypass -File (Join-Path $Dest "scripts\register-task.ps1") -At $At | Out-Null
+# $ErrorActionPreference = "Stop" does not react to a native process's exit code in Windows PowerShell 5.1.
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "  Couldn't set the weekday refresh (register-task.ps1 exit $LASTEXITCODE, time '$At'). Fix the problem above and run setup again, or set the time later in the app's Settings." -ForegroundColor Yellow
+    exit 1
+}
 Ok "Will refresh itself weekdays at $At"
 
 # ---------- 6. Open it ----------
 if ($NoLaunch) {
     Ok "Installed. Open Loops will guide you through connecting Slack and email when you first open it."
 } else {
-# $ErrorActionPreference = "Stop" does not react to a native process's exit code in Windows PowerShell 5.1.
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "  Couldn't set the weekday refresh (register-task.ps1 exit $LASTEXITCODE, time '$At'). Fix the problem above and run setup again, or set the time later in the app's Settings." -ForegroundColor Yellow
-    exit 1
-}
     Say "Opening Open Loops - it will guide you through connecting Slack and email."
     Start-Process -FilePath $pyw -ArgumentList "-m openloops.app" -WorkingDirectory $Dest
 }
