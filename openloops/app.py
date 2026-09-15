@@ -20,8 +20,17 @@ PORT = int(os.environ.get("OPENLOOPS_PORT", "8765"))
 WIN = sys.platform == "win32"
 MAC = sys.platform == "darwin"
 
-IDLE_EXIT_S = 3 * 3600  # server quits after 3h with no page activity
+IDLE_EXIT_S = 3 * 3600  # backstop: server quits after 3h with no page activity
 last_seen = time.time()
+# Pages that are open right now: page id -> last request time. Each page invents an id, sends it on
+# every request, and says goodbye (sendBeacon) when it closes. Once no page is left, the server quits
+# after a short grace (a reload is a goodbye followed by a hello within a second). Pages that vanish
+# without a goodbye (browser crash, laptop closed) are forgotten after PAGE_STALE_S.
+pages = {}
+bye_at = 0.0
+quit_requested = False
+PAGE_GRACE_S = 4
+PAGE_STALE_S = 15 * 60
 PEOPLEF = ROOT / "people_suggested.json"
 
 def cfg():
@@ -87,6 +96,9 @@ class H(BaseHTTPRequestHandler):
     def _json(self, obj, code=200):
         global last_seen
         last_seen = time.time()
+        pid = self.headers.get("X-OL-Page")
+        if pid:
+            pages[pid] = last_seen
         b = json.dumps(obj, ensure_ascii=False).encode("utf-8")
         self.send_response(code)
         self.send_header("Content-Type", "application/json; charset=utf-8")
@@ -149,6 +161,16 @@ class H(BaseHTTPRequestHandler):
         global doctor_cache
         n = int(self.headers.get("Content-Length") or 0)
         body = json.loads(self.rfile.read(n) or b"{}")
+        if self.path == "/api/bye":  # a page closed (or reloaded: its successor says hello within a second)
+            global bye_at
+            pages.pop(str(body.get("page") or ""), None)
+            bye_at = time.time()
+            return self._json({"ok": True, "pages": len(pages)})
+        if self.path == "/api/quit":  # Settings button or `python -m openloops.app --stop`
+            global quit_requested
+            quit_requested = True
+            busy = [k for k, j in jobs.items() if j["running"]]
+            return self._json({"ok": True, "after_jobs": busy})
         if self.path == "/api/refresh":
             return self._json({"started": run_job("refresh", ["--slack-only"] if body.get("slack_only") else None)})
         if self.path == "/api/daylog":
@@ -318,6 +340,7 @@ class H(BaseHTTPRequestHandler):
 
 def port_busy(port=None):
     with socket.socket() as sk:
+        sk.settimeout(0.3)  # loopback answers instantly when something listens; Windows takes ~2 s to give up otherwise
         return sk.connect_ex(("127.0.0.1", port or PORT)) == 0
 
 
@@ -346,7 +369,28 @@ def pick_port(start=None):
     raise SystemExit(f"Open Loops: no free port between {start} and {start + 19}; set OPENLOOPS_PORT")
 
 
+def stop_running():
+    """`python -m openloops.app --stop`: ask the running instance (if any) to quit. Exit 0 if one was told."""
+    import urllib.request
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(20) as ex:  # probe the whole range at once: closed ports take the full timeout each
+        busy = [p for p, b in zip(range(PORT, PORT + 20), ex.map(port_busy, range(PORT, PORT + 20))) if b]
+    for p in busy:
+        if already_running(p):
+            req = urllib.request.Request(f"http://127.0.0.1:{p}/api/quit", data=b"{}",
+                                         headers={"Content-Type": "application/json"}, method="POST")
+            with urllib.request.urlopen(req, timeout=5) as r:
+                out = json.loads(r.read() or b"{}")
+            after = out.get("after_jobs") or []
+            print(f"Open Loops on port {p}: stopping" + (f" once {', '.join(after)} finishes" if after else ""))
+            return 0
+    print("Open Loops is not running")
+    return 1
+
+
 if __name__ == "__main__":
+    if "--stop" in sys.argv:
+        sys.exit(stop_running())
     PORT, running = pick_port()
     url = f"http://localhost:{PORT}"
     def open_browser():
@@ -372,8 +416,15 @@ if __name__ == "__main__":
 
     def reaper():
         while True:
-            time.sleep(60)
-            if time.time() - last_seen > IDLE_EXIT_S and not any(j["running"] for j in jobs.values()):
+            time.sleep(1)
+            now = time.time()
+            for pid, seen in list(pages.items()):
+                if now - seen > PAGE_STALE_S:
+                    pages.pop(pid, None)
+            if any(j["running"] for j in jobs.values()):
+                continue  # never pull the rug from under a refresh/chase; check again once it is done
+            no_pages = bye_at and not pages and now - bye_at > PAGE_GRACE_S and now - last_seen > PAGE_GRACE_S
+            if quit_requested or no_pages or now - last_seen > IDLE_EXIT_S:
                 srv.shutdown()
                 return
 

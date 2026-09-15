@@ -149,6 +149,11 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
 <!-- ================= SETTINGS ================= -->
 <div id="page_settings" style="display:none">
  <div class="box">
+  <h3>Quit</h3>
+  <div class="sub">Closing this tab stops the app by itself a few seconds later (after any running job). This button does the same without closing the tab. To start again, double-click the Open Loops icon.</div>
+  <button id="quitbtn" onclick="quitApp()" style="margin-top:6px">Quit Open Loops</button>
+ </div>
+ <div class="box">
   <h3>ClaudeCloud vault</h3>
   <div class="sub">Folder with <code>02-Research/standing-items.md</code>. Blank = <code>~/ClaudeCloud</code>. Open Loops re-reads that file every time the page refreshes (about once a minute) — it does not watch GitHub. New or rewritten lines show a <b>new</b> / <b>updated</b> mark for the rest of the day. Done asks how you closed them and writes that into the vault.</div>
   <input id="cfg_vault" style="margin:6px 0 0;width:100%" placeholder="/Users/you/ClaudeCloud">
@@ -247,7 +252,9 @@ const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&
 const host=u=>{try{return new URL(u).host.replace(/^www\./,'')}catch(e){return u}};
 // escape first, then make bare URLs clickable - notes are free text typed by you or written by the agent
 const linkify=s=>esc(s).replace(/https?:\/\/[^\s<]+/g,u=>`<a href="${u}" target="_blank" rel="noopener">${u.length>48?host(u)+'/…':u}</a>`);
-const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)}:{});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
+// Every request carries this page's id; closing the tab sends a goodbye and the app quits a few seconds later (see app.py).
+const PAGE=Math.random().toString(36).slice(2)+Date.now().toString(36);let stopped=false;
+const api=async(u,b)=>{const r=await fetch(u,b?{method:'POST',headers:{'Content-Type':'application/json','X-OL-Page':PAGE},body:JSON.stringify(b)}:{headers:{'X-OL-Page':PAGE}});if(!r.ok)throw new Error(u+' -> '+r.status+' '+(await r.text()).slice(0,300));return r.json()};
 function banner(msg){const b=$('#banner');if(!msg){b.style.display='none';return}b.style.display='';b.textContent=msg}
 
 // ---------- tabs ----------
@@ -487,6 +494,11 @@ async function loop(){clearTimeout(loopT);try{
   await tick();banner('');
  }catch(e){banner('Something went wrong talking to the app: '+e.message+' — if it keeps happening, close this tab and open Open Loops again.')}
  const st=stage();loopT=setTimeout(loop,(J&&Object.values(J).some(j=>j.running))||st!=='ready'?4000:60000)}
-document.addEventListener('visibilitychange',()=>{if(!document.hidden)loop()});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!stopped)loop()});
+window.addEventListener('pagehide',()=>{if(stopped)return;const b=new Blob([JSON.stringify({page:PAGE})],{type:'application/json'});if(!(navigator.sendBeacon&&navigator.sendBeacon('/api/bye',b)))fetch('/api/bye',{method:'POST',body:b,keepalive:true}).catch(()=>{})});
+window.addEventListener('pageshow',e=>{if(e.persisted&&!stopped)loop()});   // back/forward cache restore: say hello again before the grace runs out
+async function quitApp(){const b=$('#quitbtn');b.disabled=true;try{const r=await api('/api/quit',{});stopped=true;clearTimeout(loopT);
+  const after=r.after_jobs&&r.after_jobs.length?' once the running '+r.after_jobs.join(', ')+' job finishes':'';
+  banner('Open Loops is stopping'+after+'. You can close this tab; double-click the Open Loops icon to start it again.')}catch(e){b.disabled=false;banner('Could not stop: '+e.message)}}
 (async()=>{try{await loadCfg();await loadState();await doctor(false);await loadDaylog();await loadRm()}catch(e){banner('Could not start: '+e.message)}loop()})();
 </script></body></html>

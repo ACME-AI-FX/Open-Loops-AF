@@ -84,6 +84,10 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
 - Double-click **Open Loops** → page opens at http://localhost:8765 (already refreshed by the morning job).
   If another program already uses port 8765, Open Loops picks the next free port and opens the browser
   there instead; set `OPENLOOPS_PORT` if you want a fixed one.
+- **Closing the tab stops the app** a few seconds later (it waits for any running job first), so the next
+  double-click starts fresh with whatever code is installed. *Quit Open Loops* at the top of Settings does the same
+  without closing the tab, and `python -m openloops.app --stop` does it from a terminal. If the tab just vanished
+  (browser crash, laptop shut), the app notices within 15 minutes, and in any case quits after 3 h idle.
 - **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).
 - **draft chase** → warm, seniority-aware nudge appears as a draft in the same Slack DM / email thread. The card then shows *"✎ chase drafted <time>"* so you don't draft twice.
 - **done / snooze / reopen** are local only. Recently-closed loops are still watched for 5 days and reopen if the person comes back with a new question.
@@ -177,7 +181,9 @@ state/logs/       one log per run
    detects whichever is connected and stores it as `miro_source`; the plugin wins if both are. Each Miro login is tied
    to one Miro team.
 3. **Second launch only opens the browser.** If Open Loops is already running, double-clicking the icon just opens the
-   page. After editing anything in `openloops/`, close the app (it exits by itself after 3 h idle) and launch again.
+   page. After editing anything in `openloops/`, close the tab (the app stops a few seconds later) or run
+   `python -m openloops.app --stop`, then launch again. If you reopen the page within those few seconds the app simply
+   carries on; a reload never stops it.
 4. **UTF-8 BOM.** PowerShell tends to write a BOM at the start of JSON files. Every reader in the app uses `utf-8-sig`
    and the installer writes without a BOM; keep both if you add scripts.
 5. **OneDrive / Dropbox folders** lock files while syncing. Install to the default `%LOCALAPPDATA%\OpenLoops`, not a

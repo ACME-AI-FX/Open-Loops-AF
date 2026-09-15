@@ -78,7 +78,7 @@ MIT licence. WhatsApp is not possible (no API for personal accounts).
 
 | Path | What it does |
 |---|---|
-| `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`) |
+| `openloops/app.py` | the page at http://localhost:8765 (`python -m openloops.app`; `--stop` quits a running one, as does closing the tab) |
 | `openloops/refresh.py` | finds new asks, checks open threads for replies (`--slack-only` for a quick Slack pass) |
 | `openloops/chase.py` · `autochase.py` | drafts (or, if you tick the boxes, sends) a nudge; the optional timer |
 | `openloops/voice.py` · `people.py` | learns how you write to each person; finds who you talk to most |
