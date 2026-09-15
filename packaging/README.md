@@ -32,6 +32,9 @@ git tag v0.2
 git push origin v0.2
 ```
 
+Tags must be `vN.N` or `vN.N.N` (the number becomes the Mac bundle version and the Windows AppVersion);
+the workflow's first job rejects anything else before the build runners start.
+
 `.github/workflows/release.yml` builds both installers (Inno Setup is preinstalled on GitHub's Windows runners)
 with `AppVersion=0.2` and `Ref=<the commit v0.2 pointed to>`, so the installer downloads exactly the code that
 was tagged even if the tag is later moved, and attaches them to a GitHub Release. Stable links, always the

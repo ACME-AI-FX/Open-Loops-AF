@@ -1,6 +1,6 @@
 # Builds the two downloadable installers and, on a version tag, attaches them to a GitHub Release.
 #
-#   git tag v0.2 && git push origin v0.2
+#   git tag v0.2 && git push origin v0.2        (tags must be vN.N or vN.N.N; anything else fails the version job)
 #     -> OpenLoops-Setup.exe and OpenLoops.dmg on https://github.com/<repo>/releases/tag/v0.2
 #     -> stable links: https://github.com/<repo>/releases/latest/download/OpenLoops-Setup.exe
 #                      https://github.com/<repo>/releases/latest/download/OpenLoops.dmg
@@ -35,9 +35,21 @@ jobs:
         shell: bash
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then
+            # The number after "v" lands in Info.plist CFBundleShortVersionString (dotted integers, max 3)
+            # and Inno's AppVersion; build-dmg.sh also refuses anything outside letters, digits, . _ / -.
+            # Fail here, on the cheap job, rather than minutes later on the Mac runner.
+            if [[ ! "$GITHUB_REF_NAME" =~ ^v[0-9]+(\.[0-9]+){1,2}$ ]]; then
+              echo "::error::Release tags must look like v0.2 or v0.2.1 - got '$GITHUB_REF_NAME'. Delete the tag and re-tag."
+              exit 1
+            fi
             echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
             echo "ref=${GITHUB_SHA}" >> "$GITHUB_OUTPUT"          # pinned: the commit the tag points to
           else
+            # Branch builds template the branch name into the Mac installer (packaging/macos/build-dmg.sh).
+            if [[ ! "$GITHUB_REF_NAME" =~ ^[A-Za-z0-9._/-]+$ ]]; then
+              echo "::error::Branch name '$GITHUB_REF_NAME' may only contain letters, digits, . _ / - to be built into an installer."
+              exit 1
+            fi
             echo "version=0.0.${GITHUB_RUN_NUMBER}" >> "$GITHUB_OUTPUT"
             echo "ref=${GITHUB_REF_NAME}" >> "$GITHUB_OUTPUT"     # branch build follows the branch
           fi
