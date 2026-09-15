@@ -82,7 +82,9 @@ if (-not (Test-Path $StateFile)) {
 $CfgFile = Join-Path $Dest "config.json"
 if (Test-Path $CfgFile) {
     # Updating: the person's own refresh time wins unless a new one was asked for explicitly.
-    $cfg = Get-Content $CfgFile -Raw | ConvertFrom-Json
+    # -Encoding UTF8: the app writes config.json as BOM-less UTF-8; PowerShell 5.1 would otherwise read it as ANSI
+    # and the rewrite below would mangle any non-ASCII name or tone text.
+    $cfg = Get-Content $CfgFile -Raw -Encoding UTF8 | ConvertFrom-Json
     if ($PSBoundParameters.ContainsKey('At')) {
         $cfg.refresh_time = $At   # keep config.json and the scheduled task in step (as Settings does)
         $cfg | ConvertTo-Json -Depth 6 | ForEach-Object { [IO.File]::WriteAllText($CfgFile, $_, (New-Object Text.UTF8Encoding $false)) }
@@ -92,7 +94,7 @@ if (Test-Path $CfgFile) {
 }
 if (-not (Test-Path $CfgFile)) {
     while (-not $Name) { $Name = (Read-Host "  Your first name (used so messages sound like you)").Trim() }
-    $tpl = Get-Content (Join-Path $Src "config.template.json") -Raw | ConvertFrom-Json
+    $tpl = Get-Content (Join-Path $Src "config.template.json") -Raw -Encoding UTF8 | ConvertFrom-Json
     $tpl.owner_name   = $Name
     $tpl.refresh_time = $At
     $tpl | ConvertTo-Json -Depth 6 | ForEach-Object { [IO.File]::WriteAllText($CfgFile, $_, (New-Object Text.UTF8Encoding $false)) }
