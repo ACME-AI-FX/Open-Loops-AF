@@ -46,13 +46,13 @@ When the required rows are ticked the checklist disappears and your list starts 
 
 ## 4. Make it sound like you
 
-Open ⚙ **Settings** (bottom of the page) → **Learn my tone**. It reads how you write to a few people and
+Open ⚙ **Settings** (tab at the top) → **Personal** → **Learn my tone**. It reads how you write to a few people and
 copies your style — relaxed with mates, a lighter touch with the boss. Add people and whether they're
 *senior / peer / junior* in the box above it.
 
 ## 5. Optional — let it send for you
 
-Also in Settings. Two boxes: **Send to internal people** and **Send to external contacts**. Off, it drafts.
+Also in Settings, under **Chasing**. Two boxes: **Send to internal people** and **Send to external contacts**. Off, it drafts.
 On, it sends without showing you first. There's also a **Timer** that chases anything quiet for a few days
 automatically; every item has an *auto: on/off* switch so you can leave one alone.
 
@@ -63,4 +63,4 @@ automatically; every item has an *auto: on/off* switch so you can leave one alon
 - It only ever looks at your own sent messages, and at the threads they're in.
 - It uses your normal Claude subscription — no extra accounts, no API keys.
 - WhatsApp isn't supported (WhatsApp doesn't allow it).
-- If something looks wrong, ⚙ Settings → the "Last job output" box shows what happened, and the `state/logs` folder keeps a record.
+- If something looks wrong, the "Last job output" box at the bottom of Home shows what happened, and the `state/logs` folder keeps a record.

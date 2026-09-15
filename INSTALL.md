@@ -27,7 +27,7 @@ whichever is available (Gmail-only and Slack-only installs both work).
 
 ### Choosing your AI
 
-`config.json` has `"agent": "claude"` (default) or `"grok"` — change it in ⚙ Settings → *Your AI*. `agent.py` maps
+`config.json` has `"agent": "claude"` (default) or `"grok"` — change it in ⚙ Settings → Preferences → *Your AI*. `agent.py` maps
 each job's tool list to the agent's own naming and flags; the prompts are identical. The connection checklist
 (`doctor.py`) checks whichever agent is selected. With Grok, Slack is **opt-in** (`"use_slack"`): off, jobs are
 Gmail-only and the Slack plugin is not started or probed. Vercel is never loaded. Headless Grok jobs pass
@@ -92,7 +92,7 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
   writes that back. The format and everything else Open Loops logs are listed under that setting. The old
   `vault_path` folder setting still works.
 - **Closing the tab stops the app** a few seconds later (it waits for any running job first), so the next
-  double-click starts fresh with whatever code is installed. *Quit Open Loops* at the bottom of Settings does the same
+  double-click starts fresh with whatever code is installed. *Quit Open Loops* under Settings → App does the same
   without closing the tab, and `python -m openloops.app --stop` does it from a terminal. If the tab just vanished
   (browser crash, laptop shut), the app notices within 15 minutes, and in any case quits after 3 h idle.
 - **Needs me** = they replied, you owe a response. **Waiting on them** = your ask is outstanding (green <2 workdays, amber 2–4, red >4).
@@ -101,7 +101,10 @@ Manual equivalents, for support: `python -m openloops.doctor`, `python -m openlo
   tomorrow / 2 days / next Monday / a week or a date. Recently-closed loops are still watched for 5 days and reopen if the
   person comes back with a new question. Each card shows its one main action (draft chase, or done when it needs you);
   note, + link, + note and the auto-chase switch sit under **more ▾**.
-- **⚙ Settings** (bottom of the page): external-email chasing on/off, tone per seniority, people list, exclusions, and *Learn my tone*.
+- **⚙ Settings** (tab at the top) is six collapsed sections, so the one you need is a glance away: **Personal** (name, *Learn my
+  tone*, who's who, exclusions), **Chasing** (external on/off, draft or send, timer, tone per seniority), **Preferences** (AI,
+  model, refresh time), **History** (how far back it reads, what it writes to disk), **Connections** (to-do file, Miro board),
+  **App** (quit, start over). The browser remembers which sections you left open. *Save settings* stays pinned at the bottom.
 - **Update Slack** (next to Refresh, shown once Slack is connected) is a quick Slack-only pass: no email, about a
   third of the time. It keeps its own cursor, so the next full Refresh still picks up every email ask made in between.
 - **+ link** on a card attaches a document URL (Drive, Miro, Notion, Figma); the refresh also captures any document
@@ -200,7 +203,7 @@ state/logs/       one log per run
 5. **OneDrive / Dropbox folders** lock files while syncing. Install to the default `%LOCALAPPDATA%\OpenLoops`, not a
    synced folder.
 6. **Which model the jobs use.** Every job runs `claude -p` with `--model` and `--effort` from `model` and
-   `effort` in `config.json` (template: `sonnet` at `xhigh`; Settings → Your AI). Sonnet at xhigh or Opus at medium
+   `effort` in `config.json` (template: `sonnet` at `xhigh`; Settings → Preferences → Your AI). Sonnet at xhigh or Opus at medium
    both do the job. Leave either blank and the jobs inherit whatever `claude` defaults to on that computer, which
    is usually the most expensive model available. Grok ignores both.
 7. **Jobs never clobber your clicks.** A refresh can run for minutes; anything you add or snooze meanwhile is kept

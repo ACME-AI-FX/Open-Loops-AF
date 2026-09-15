@@ -53,6 +53,15 @@ details summary{cursor:pointer;color:var(--mut);font-size:12px}
 .steps span.done{border-color:var(--g);color:var(--g)}.steps span.now{background:var(--b);border-color:var(--b);color:#fff}
 input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px solid var(--line);border-radius:6px;background:var(--bg);color:var(--ink)}
 .spin{display:inline-block;width:12px;height:12px;border:2px solid var(--line);border-top-color:var(--b);border-radius:50%;animation:s 1s linear infinite;vertical-align:-2px;margin-right:6px}@keyframes s{to{transform:rotate(360deg)}}
+details.cfg{background:var(--card);border:1px solid var(--line);border-radius:8px;margin-bottom:10px}
+details.cfg>summary{list-style:none;display:flex;align-items:center;gap:12px;min-height:48px;padding:6px 16px;cursor:pointer;color:var(--ink);border-radius:8px}
+details.cfg>summary::-webkit-details-marker{display:none}details.cfg>summary:hover{background:var(--bg)}
+details.cfg>summary::before{content:"›";display:inline-block;width:14px;color:var(--mut);transition:transform .15s}details.cfg[open]>summary::before{transform:rotate(90deg)}
+details.cfg>summary b{font-size:14px;min-width:110px}details.cfg>summary .sub{margin:0;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+details.cfg[open]>summary{border-bottom:1px solid var(--line);border-radius:8px 8px 0 0}details.cfg>.body{padding:12px 16px 2px}details.cfg>.body .box{padding:12px 0 14px;border:0;border-bottom:1px solid var(--line);border-radius:0;margin:0}details.cfg>.body .box:last-child{border-bottom:0}
+details.cfg.danger{border-color:var(--r)}
+.cfg-head{display:flex;align-items:baseline;gap:12px;margin:0 0 10px}.cfg-head h2{margin:0;flex:1}.cfg-head button{min-height:32px;padding:0 8px;font-size:12px}
+@media(max-width:720px){details.cfg>summary{flex-wrap:wrap;gap:2px 12px}details.cfg>summary .sub{flex-basis:100%;padding-left:26px;white-space:normal}}
 #savebar{position:sticky;bottom:0;background:var(--card);border-top:1px solid var(--line);margin:8px -24px 0;padding:10px 24px;display:flex;gap:10px;align-items:center;z-index:2}
 </style></head><body>
 <header><h1>Open Loops</h1>
@@ -178,26 +187,12 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
 
 <!-- ================= SETTINGS ================= -->
 <div id="page_settings" style="display:none" oninput="cfgDirty()" onchange="cfgDirty()">
- <h2 style="margin-top:0">You</h2>
+ <div class="cfg-head"><h2>Settings</h2><button class="quiet" type="button" onclick="cfgAll(true)">Open all</button><button class="quiet" type="button" onclick="cfgAll(false)">Close all</button></div>
+ <details class="cfg" id="cs_personal" ontoggle="cfgRemember(this)"><summary><b>Personal</b><span class="sub">your name · how you write · who's who · exclusions</span></summary><div class="body">
  <div class="box">
   <h3>Your name</h3>
   <div class="sub">First name, as you'd sign a message.</div>
   <input id="cfg_name" style="margin:6px 0 0;width:240px">
- </div>
- <div class="box">
-  <h3>Your AI</h3>
-  <div class="sub">Which AI assistant reads your messages and writes the nudges. It must be installed and signed in on this computer — after switching, the Home tab re-checks the connections.</div>
-  <select id="cfg_agent" style="margin:6px 0 0;font:inherit;padding:4px" onchange="if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=this.value==='grok'?'':'none';$('#cfg_model_wrap').style.display=this.value==='claude'?'':'none'"><option value="claude">Claude (Claude Code)</option><option value="grok">Grok (Grok CLI)</option></select>
-  <div id="cfg_model_wrap" style="margin-top:10px">
-   <label>Model <select id="cfg_model" style="font:inherit;padding:4px"><option value="sonnet">Sonnet (recommended)</option><option value="haiku">Haiku (cheapest)</option><option value="opus">Opus</option><option value="">Claude Code's default</option></select></label>
-   <label style="margin-left:12px">Effort <select id="cfg_effort" style="font:inherit;padding:4px"><option value="xhigh">xhigh (recommended with Sonnet)</option><option value="max">max</option><option value="high">high</option><option value="medium">medium (recommended with Opus)</option><option value="low">low</option><option value="">Claude Code's default</option></select></label>
-   <div class="sub">Claude only. Which Claude model the scans, refreshes and chase drafts run on, and how hard it thinks per turn. Sonnet at xhigh or Opus at medium both do the job; Sonnet is the cheaper of the two. "Claude Code's default" uses whatever <code>claude</code> is set to on this computer, which is often the most expensive model.</div>
-  </div>
-  <div class="sub" id="cfg_slack_src" style="margin-top:6px"></div>
-  <div id="cfg_slack_wrap" style="margin-top:10px">
-   <label><input type="checkbox" id="cfg_use_slack"> Use Slack</label>
-   <div class="sub">Grok only. Off (default) = Gmail-only; Slack is not started or checked. On = load Grok's Slack plugin and show it on the connection checklist — then Open Grok → <code>/mcps</code> → Slack → <b>i</b>.</div>
-  </div>
  </div>
  <div class="box">
   <h3>Your voice</h3>
@@ -206,11 +201,20 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <div id="voice"></div>
  </div>
  <div class="box">
-  <h3>History</h3>
-  <div class="sub">How far back the AI reads when building context — the "who's who" people scan (both people you write to and real people who write to you), and the very first loop scan. Longer = fuller picture, slower scans. To re-scan with a new window: press "Pick from who I message most" below, or Start over for a full rebuild.</div>
-  <select id="cfg_history" style="margin:6px 0 0;font:inherit;padding:4px"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="60">Last 60 days</option><option value="90">Last 90 days</option><option value="180">Last 180 days</option></select>
+  <h3>People &amp; seniority</h3>
+  <div class="sub">Who counts as senior / peer / junior / external. Anyone not listed is treated as a peer; external email addresses as external.</div>
+  <div id="people_table" style="margin-top:8px"></div>
+  <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button onclick="reopenPeople()">Pick from who I message most</button><span class="sub">re-runs the Who's who step on the Home tab</span></div>
+  <details style="margin-top:8px"><summary>Advanced: edit as JSON</summary><textarea id="cfg_people" rows="8" style="width:100%;font:12px/1.4 ui-monospace,Consolas,monospace;margin-top:6px"></textarea></details>
  </div>
- <h2>Chasing</h2>
+ <div class="box">
+  <h3>Exclusions</h3>
+  <div class="sub">People / topics the refresh should never turn into loops (comma-separated).</div>
+  <input id="cfg_excl_people" style="width:100%;margin-top:6px" placeholder="people">
+  <input id="cfg_excl_topics" style="width:100%;margin-top:6px" placeholder="topics">
+ </div>
+ </div></details>
+ <details class="cfg" id="cs_chasing" ontoggle="cfgRemember(this)"><summary><b>Chasing</b><span class="sub">who gets chased · draft or send · the timer · tone</span></summary><div class="body">
  <div class="box">
   <h3>Chasing</h3>
   <label><input type="checkbox" id="cfg_ext"> Chase <b>external</b> email contacts too (vendors, lawyers). Off = internal people only.</label>
@@ -235,20 +239,23 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <div class="sub">Base style applied to everything, then a per-seniority layer. Edit freely.</div>
   <div id="tones"></div>
  </div>
+ </div></details>
+ <details class="cfg" id="cs_prefs" ontoggle="cfgRemember(this)"><summary><b>Preferences</b><span class="sub">which AI and model · daily refresh time</span></summary><div class="body">
  <div class="box">
-  <h3>People &amp; seniority</h3>
-  <div class="sub">Who counts as senior / peer / junior / external. Anyone not listed is treated as a peer; external email addresses as external.</div>
-  <div id="people_table" style="margin-top:8px"></div>
-  <div style="margin-top:8px;display:flex;gap:8px;align-items:center"><button onclick="reopenPeople()">Pick from who I message most</button><span class="sub">re-runs the Who's who step on the Home tab</span></div>
-  <details style="margin-top:8px"><summary>Advanced: edit as JSON</summary><textarea id="cfg_people" rows="8" style="width:100%;font:12px/1.4 ui-monospace,Consolas,monospace;margin-top:6px"></textarea></details>
+  <h3>Your AI</h3>
+  <div class="sub">Which AI assistant reads your messages and writes the nudges. It must be installed and signed in on this computer — after switching, the Home tab re-checks the connections.</div>
+  <select id="cfg_agent" style="margin:6px 0 0;font:inherit;padding:4px" onchange="if($('#cfg_slack_wrap'))$('#cfg_slack_wrap').style.display=this.value==='grok'?'':'none';$('#cfg_model_wrap').style.display=this.value==='claude'?'':'none'"><option value="claude">Claude (Claude Code)</option><option value="grok">Grok (Grok CLI)</option></select>
+  <div id="cfg_model_wrap" style="margin-top:10px">
+   <label>Model <select id="cfg_model" style="font:inherit;padding:4px"><option value="sonnet">Sonnet (recommended)</option><option value="haiku">Haiku (cheapest)</option><option value="opus">Opus</option><option value="">Claude Code's default</option></select></label>
+   <label style="margin-left:12px">Effort <select id="cfg_effort" style="font:inherit;padding:4px"><option value="xhigh">xhigh (recommended with Sonnet)</option><option value="max">max</option><option value="high">high</option><option value="medium">medium (recommended with Opus)</option><option value="low">low</option><option value="">Claude Code's default</option></select></label>
+   <div class="sub">Claude only. Which Claude model the scans, refreshes and chase drafts run on, and how hard it thinks per turn. Sonnet at xhigh or Opus at medium both do the job; Sonnet is the cheaper of the two. "Claude Code's default" uses whatever <code>claude</code> is set to on this computer, which is often the most expensive model.</div>
+  </div>
+  <div class="sub" id="cfg_slack_src" style="margin-top:6px"></div>
+  <div id="cfg_slack_wrap" style="margin-top:10px">
+   <label><input type="checkbox" id="cfg_use_slack"> Use Slack</label>
+   <div class="sub">Grok only. Off (default) = Gmail-only; Slack is not started or checked. On = load Grok's Slack plugin and show it on the connection checklist — then Open Grok → <code>/mcps</code> → Slack → <b>i</b>.</div>
+  </div>
  </div>
- <div class="box">
-  <h3>Exclusions</h3>
-  <div class="sub">People / topics the refresh should never turn into loops (comma-separated).</div>
-  <input id="cfg_excl_people" style="width:100%;margin-top:6px" placeholder="people">
-  <input id="cfg_excl_topics" style="width:100%;margin-top:6px" placeholder="topics">
- </div>
- <h2>Connections</h2>
  <div class="box">
   <h3>Daily refresh time</h3>
   <div class="sub">Weekdays, only while you're logged in. Runs the refresh, then the timer (if enabled). Pick something before you'd normally open the page. Applies on its own; no need to press Save.</div>
@@ -256,17 +263,30 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
    <input id="cfg_time" type="time" style="font:inherit;padding:4px"> <button onclick="saveTime()">Apply</button> <span class="sub" id="time_msg"></span>
   </div>
  </div>
+ </div></details>
+ <details class="cfg" id="cs_history" ontoggle="cfgRemember(this)"><summary><b>History</b><span class="sub">how far back it reads · what it writes to disk</span></summary><div class="body">
+ <div class="box">
+  <h3>History</h3>
+  <div class="sub">How far back the AI reads when building context — the "who's who" people scan (both people you write to and real people who write to you), and the very first loop scan. Longer = fuller picture, slower scans. To re-scan with a new window: press "Pick from who I message most" below, or Start over for a full rebuild.</div>
+  <select id="cfg_history" style="margin:6px 0 0;font:inherit;padding:4px"><option value="7">Last 7 days</option><option value="30">Last 30 days</option><option value="60">Last 60 days</option><option value="90">Last 90 days</option><option value="180">Last 180 days</option></select>
+ </div>
+ <div class="box">
+  <h3>What Open Loops writes to disk</h3>
+  <div class="sub">Everything lives next to the app, nothing else on this computer is touched: <code>state.json</code> (your list), <code>state/logs/</code> (one log per job run), <code>state/daylog/&lt;date&gt;.json</code> + <code>.html</code> (each Day log), <code>state/roadmap.json</code> and <code>state/roadmap-created.txt</code> (Miro cards it added), and your own to-do file if you set one under Connections.</div>
+ </div>
+ </div></details>
+ <details class="cfg" id="cs_connections" ontoggle="cfgRemember(this)"><summary><b>Connections</b><span class="sub">your own to-do file · Miro roadmap board</span></summary><div class="body">
  <div class="box">
   <h3>Your own to-do file (optional)</h3>
   <div class="sub">A markdown file you already keep, anywhere on this computer (a notes vault, a synced folder, a git repo). Its open lines show under <b>Needs me</b>; pressing <b>done</b> asks how you closed the item and writes that back into the file. Re-read about once a minute. Leave blank if you don't keep one.</div>
   <input id="cfg_standing" style="margin:6px 0 0;width:100%" oninput="clearTimeout(window.stT);window.stT=setTimeout(standingStatus,400)" placeholder="C:\Users\you\Notes\standing-items.md   (a folder also works: <folder>\02-Research\standing-items.md)">
   <div style="margin-top:8px;display:flex;gap:8px;align-items:center;flex-wrap:wrap"><span class="sub" id="standing_status"></span><button id="standing_create" type="button" style="display:none" onclick="standingCreate()">Create a starter file there</button></div>
-  <details style="margin-top:8px"><summary>The format, and what else gets logged</summary>
+  <details style="margin-top:8px"><summary>The file format</summary>
    <div class="sub" style="margin-top:6px">One item per line, ids A1, A2… Snooze an item by adding <code>| snoozed-until YYYY-MM-DD</code>. Tick it here or in Open Loops.</div>
    <pre class="out" style="margin-top:6px">- [ ] A1 | project | what to do | added 2026-09-15
 - [ ] A2 | Client X | send the revised quote | added 2026-09-15 | snoozed-until 2026-09-22
 - [x] A3 | project | done item | added 2026-09-01 | done 2026-09-14</pre>
-   <div class="sub" style="margin-top:6px">When you press done, the line moves under <b>## Closed</b> and your note is appended under <b>## Closure notes</b> as <code>- A1 | date | note</code>. Other things Open Loops writes: <code>state/daylog/&lt;date&gt;.json</code> + <code>.html</code> (each Day log), <code>state/logs/</code> (one log per job run), <code>state/roadmap.json</code> and <code>state/roadmap-created.txt</code> (Miro cards it added). Nothing else on disk is touched.</div>
+   <div class="sub" style="margin-top:6px">When you press done, the line moves under <b>## Closed</b> and your note is appended under <b>## Closure notes</b> as <code>- A1 | date | note</code>.</div>
   </details>
  </div>
  <div class="box">
@@ -275,18 +295,20 @@ input[type=text],input:not([type]),textarea{font:inherit;padding:5px;border:1px 
   <input id="cfg_rm_board" style="margin:6px 0 0;width:100%" placeholder="board name or https://miro.com/app/board/…">
   <input id="cfg_rm_frame" style="margin:6px 0 0;width:100%" placeholder="frame title, e.g. Roadmap Sep 2026">
  </div>
- <h2>App</h2>
+ </div></details>
+ <details class="cfg danger" id="cs_app" ontoggle="cfgRemember(this)"><summary><b>App</b><span class="sub">quit · start over</span></summary><div class="body">
  <div class="box">
   <h3>Quit</h3>
   <div class="sub">Closing this tab stops the app by itself a few seconds later (after any running job). This button does the same without closing the tab. To start again, double-click the Open Loops icon.</div>
   <button id="quitbtn" onclick="quitApp()" style="margin-top:6px">Quit Open Loops</button>
  </div>
- <div class="box" style="border-color:var(--r)">
+ <div class="box">
   <h3 style="color:var(--r)">Start over</h3>
   <div class="sub">Wipes the list, the people picks and the learned tone, and takes you back to step 1 as a brand-new user would see it. Keeps your name, domains and tone settings. Slack/Gmail stay connected. This cannot be undone.</div>
   <div style="margin-top:8px"><button onclick="startOver()" style="border-color:var(--r);color:var(--r)">Start over…</button></div>
  </div>
- <div id="savebar">
+ </div></details>
+<div id="savebar">
   <button class="primary" id="cfg_save" onclick="saveCfg()">Save settings</button><span class="sub" id="cfg_msg"></span>
  </div>
 </div>
@@ -321,9 +343,15 @@ document.addEventListener('keydown',e=>{if(e.key==='Enter'&&e.target.tagName==='
 
 // ---------- tabs ----------
 let formPainted=false;
-function showTab(t){$('#page_home').style.display=t==='home'?'':'none';$('#page_settings').style.display=t==='settings'?'':'none';
+const CS_KEY='ol.settings.open';
+function cfgOpenSet(){try{return new Set(JSON.parse(localStorage.getItem(CS_KEY)||'[]'))}catch(e){return new Set()}}
+function cfgRemember(d){const s=cfgOpenSet();d.open?s.add(d.id):s.delete(d.id);try{localStorage.setItem(CS_KEY,JSON.stringify([...s]))}catch(e){}}
+function cfgRestore(){const s=cfgOpenSet();document.querySelectorAll('details.cfg').forEach(d=>{d.open=s.has(d.id)})}
+function cfgAll(open){document.querySelectorAll('details.cfg').forEach(d=>{d.open=open})}
+function cfgShow(id){const d=document.getElementById(id);if(d&&!d.open)d.open=true;return d}
+function showTab(t,sec){$('#page_home').style.display=t==='home'?'':'none';$('#page_settings').style.display=t==='settings'?'':'none';
  $('#tab_home').classList.toggle('on',t==='home');$('#tab_settings').classList.toggle('on',t==='settings');if(S&&DOC)paintButtons(stage());else{$('#refresh').style.display='none';$('#uslack').style.display='none'}
- if(t==='settings'&&!formPainted)paintForm()}
+ if(t==='settings'&&!formPainted)paintForm();if(t==='settings'&&sec){const d=cfgShow(sec);if(d)d.scrollIntoView({behavior:'smooth',block:'start'})}}
 
 // ---------- data ----------
 async function loadState(){const r=await api('/api/state');S=r.state;J=r.jobs;TODAY=r.today}
@@ -513,7 +541,7 @@ function rmRows(){return (RM&&RM.store&&RM.store.rows)||[]}
 async function loadRm(){try{RM=await api('/api/roadmap')}catch(e){RM=null}rmRendered='';paintRm()}
 function paintRm(){if(!RM||!$('#roadmap'))return;
  if(!miroOk()){$('#rm_head').textContent='· connect Miro in Claude to use this (see the connection checklist)';$('#roadmap').style.display='none';return}
- if(!RM.configured.ok){$('#rm_head').textContent='· set the board and frame in ⚙ Settings';$('#roadmap').style.display='none';return}
+ if(!RM.configured.ok){$('#rm_head').innerHTML='· <a href="#" onclick="showTab(&quot;settings&quot;,&quot;cs_connections&quot;);return false">set the board and frame in Settings</a>';$('#roadmap').style.display='none';return}
  $('#roadmap').style.display='';const b=RM.store.board||{};
  $('#rm_head').textContent='· '+(b.frame||RM.configured.frame)+(b.read_at?' · read '+fmt(b.read_at):' · board not read yet');
  const busy=running('roadmap');for(const id of ['#rm_parsebtn','#rm_readbtn','#rm_prevbtn'])$(id).disabled=busy;
@@ -630,5 +658,6 @@ window.addEventListener('pageshow',e=>{if(e.persisted&&!stopped)loop()});   // b
 async function quitApp(){const b=$('#quitbtn');b.disabled=true;try{const r=await api('/api/quit',{});stopped=true;clearTimeout(loopT);
   const after=r.after_jobs&&r.after_jobs.length?' once the running '+r.after_jobs.join(', ')+' job finishes':'';
   banner('Open Loops is stopping'+after+'. You can close this tab; double-click the Open Loops icon to start it again.')}catch(e){b.disabled=false;banner('Could not stop: '+e.message)}}
+cfgRestore();
 (async()=>{try{await loadCfg();await loadState();await doctor(false);await loadDaylog();await loadRm()}catch(e){banner('Could not start: '+e.message)}loop()})();
 </script></body></html>
