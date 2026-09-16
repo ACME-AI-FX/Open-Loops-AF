@@ -65,8 +65,11 @@ jobs:
           # Every value is validated here, on the cheap job, rather than minutes later on the Mac runner:
           # the version lands in Info.plist CFBundleShortVersionString and Inno's AppVersion, and
           # build-dmg.sh refuses anything outside letters, digits, . _ / -.
-          STABLE_RE='^v[0-9]+\.[0-9]+(\.[0-9]+)?$'
-          ANY_RE='^v[0-9]+(\.[0-9]+){1,2}(-dev\.[0-9]+)?$'
+          # No leading zeroes: bump() does Bash arithmetic on the parts, and "08" is an invalid octal number
+          # there, so one hand-pushed v0.1.08 would break every automatic release after it.
+          NUM='(0|[1-9][0-9]*)'
+          STABLE_RE="^v${NUM}\.${NUM}(\.${NUM})?$"
+          ANY_RE="^v${NUM}\.${NUM}(\.${NUM}(-dev\.${NUM})?)?$"
 
           # Newest stable tag (v0.1 counts as 0.1.0), or 0.0.0 when there is none yet.
           newest_stable() {
