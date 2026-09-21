@@ -106,8 +106,10 @@ Leave data-description off when there is neither detail nor owners (then height=
 data-color by state: not_started #9aa0a8 (gray), in_progress #f5c400 (yellow), blocked #da0063 (red),
 done #00b86b (green). Match the size of the cards already on the frame if they differ from 320x88.
 
-If the cell already has items, place the new card below them without overlapping; if the cell is
-full, place it just outside the frame next to that lane and say so in "note".
+If the cell already has items, place the new card below them without overlapping. If the cell is
+full (the card would not fit inside the frame at that lane and column), do NOT create it anywhere
+else - a card outside the frame is a mistake. Report that row with "item_id": "" and the reason in
+"note"; it stays staged for a later run once there is room.
 
 NEVER delete, move, resize or edit any existing item. Do not create anything not listed here.
 The item ids you report must be the data-miro-id values from the result_svg, never invented.
@@ -119,7 +121,7 @@ Details (id: detail text):
 
 Reply with ONLY a JSON object between the markers, nothing else:
 <<<ROADMAP>>>
-{{"created": [{{"id": "r1", "item_id": "<miro item id>", "url": "<link to the item or board>", "note": ""}}]}}
+{{"created": [{{"id": "r1", "item_id": "<miro item id, or empty when not created>", "url": "<link to the item or board, or empty>", "note": "<empty, or why it was not created>"}}]}}
 <<<END>>>
 """
 
@@ -314,21 +316,28 @@ def main(mode, confirm=False):
                                          details="\n".join(f'- {r["id"]}: {r["detail"]}' for r in todo if r.get("detail")) or "- (none)"), MIRO_TOOLS)
     by_id = {r["id"]: r for r in todo}
     n = 0
-    lines = []
+    lines, missed, seen = [], [], set()
     for cr in out.get("created") or []:
         r = by_id.get(str(cr.get("id"))) if isinstance(cr, dict) else None
-        if not r or not cr.get("item_id"):
+        if not r:
+            continue
+        seen.add(r["id"])
+        if not cr.get("item_id"):  # not created (e.g. the cell was full): row stays pending for a later build
+            missed.append(f'{r["title"]}: {str(cr.get("note") or "no reason given").strip()}')
             continue
         r["posted_id"] = str(cr["item_id"])
         lines.append(f'{cr["item_id"]}  {r["title"]}')
         n += 1
+    missed += [f'{r["title"]}: not in the agent\'s reply' for r in todo if r["id"] not in seen]
     if lines:
         CREATED.parent.mkdir(parents=True, exist_ok=True)
         with CREATED.open("a", encoding="utf-8") as f:
             f.write("\n".join(lines) + "\n")
     d["preview"] = {"at": "", "plan": []}
     save(d)
-    print(f"done: {n} of {len(todo)} added to the board")
+    for m in missed:  # before the summary line, so the page's console tail stays the summary
+        print("not added: " + m)
+    print(f"done: {n} of {len(todo)} added to the board" + (f" ({len(missed)} not added - see the job log)" if missed else ""))
     if n < len(todo):
         sys.exit(1)
 
