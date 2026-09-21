@@ -24,7 +24,7 @@ MIRO_TOOLS = ["miro.*"]
 
 HEAD = """UNATTENDED RUN - nobody can answer questions. Do not ask any. Output only what is requested.
 The Miro tools come from the Miro plugin; use whichever of them fit (board_list_items / canvas_search /
-canvas_read_as_svg for reading, canvas_create_from_svg or the sticky-note tool for creating). If a tool
+canvas_read_as_svg for reading, canvas_update_from_svg / canvas_create_from_svg for creating). If a tool
 fails, try another approach once, then report what you could.
 
 """
@@ -89,17 +89,32 @@ Reply with ONLY a JSON object between the markers, nothing else:
 
 BUILD_PROMPT = HEAD + """Add roadmap items to the frame "{frame}" on {name}'s Miro board "{board}" ({url}).
 
-Create exactly ONE sticky note (or card, if sticky notes are unavailable) per row below, INSIDE the
-frame, at the intersection of the row's lane (a row of the grid, named down the left edge) and its
-column (named across the top). Text = the title, plus " — " and the owners if any. Sticky colour by
-state: not_started = light gray, in_progress = yellow, blocked = red, done = green. If the cell
-already has items, place the new one beside them without overlapping; if the cell is full, place
-it just outside the frame next to that lane and say so in "note".
+Create exactly ONE CARD per row below, INSIDE the frame, at the intersection of the row's lane (a row
+of the grid, named down the left edge) and its column (named across the top). Cards, never sticky
+notes: this frame is a card board and a sticky note on it is a mistake.
+
+How to make a card with the Miro tools: first canvas_read_as_svg on the frame so you have its
+data-miro-id and the positions of its lane / column labels and existing items. Then ONE
+canvas_update_from_svg call whose SVG wraps the new elements in the frame's own
+<g data-miro-id="<frame id>" transform="translate(fx,fy)"> so child x / y are relative to the frame.
+Each new card is (no data-miro-id - the server assigns one):
+  <rect data-type="custom-widget" data-widget-type="card" data-title="<title>"
+        data-description="<detail>  Owners: <owners>" data-color="<hex>" x=".." y=".."
+        width="320" height="88" fill="none" stroke="none" />
+Leave data-description off when there is neither detail nor owners (then height="60").
+data-color by state: not_started #9aa0a8 (gray), in_progress #f5c400 (yellow), blocked #da0063 (red),
+done #00b86b (green). Match the size of the cards already on the frame if they differ from 320x88.
+
+If the cell already has items, place the new card below them without overlapping; if the cell is
+full, place it just outside the frame next to that lane and say so in "note".
 
 NEVER delete, move, resize or edit any existing item. Do not create anything not listed here.
+The item ids you report must be the data-miro-id values from the result_svg, never invented.
 
 Rows (id, title, owners, lane, column, state):
 {rows}
+Details (id: detail text):
+{details}
 
 Reply with ONLY a JSON object between the markers, nothing else:
 <<<ROADMAP>>>
@@ -294,7 +309,8 @@ def main(mode, confirm=False):
     if not todo:
         print("SKIPPED: nothing planned to add - run Preview first"); sys.exit(2)
     out = _ask(mode, BUILD_PROMPT.format(name=name, frame=c["frame"], board=c["board"],
-                                         url=b.get("url") or "url unknown", rows=_rows_text(todo)), MIRO_TOOLS)
+                                         url=b.get("url") or "url unknown", rows=_rows_text(todo),
+                                         details="\n".join(f'- {r["id"]}: {r["detail"]}' for r in todo if r.get("detail")) or "- (none)"), MIRO_TOOLS)
     by_id = {r["id"]: r for r in todo}
     n = 0
     lines = []
