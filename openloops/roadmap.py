@@ -19,7 +19,7 @@ CREATED = ROOT / "state" / "roadmap-created.txt"
 LOG = ROOT / "state" / "logs"
 
 MODES = ("read", "parse", "preview", "build")
-STATES = ("not_started", "in_progress", "done")
+STATES = ("not_started", "in_progress", "blocked", "done")
 MIRO_TOOLS = ["miro.*"]
 
 HEAD = """UNATTENDED RUN - nobody can answer questions. Do not ask any. Output only what is requested.
@@ -58,7 +58,8 @@ People {name} works with (use for owners when a first name appears): {people}
 
 For each row: title (short, imperative or noun phrase), detail (one line, may be ""), owners
 (comma-separated names or ""), lane, column, state - "done" if the note says it is finished,
-"in_progress" if it is being worked on, otherwise "not_started".
+"blocked" if it is waiting on someone / something else or explicitly stuck, "in_progress" if it is
+being worked on, otherwise "not_started".
 
 Reply with ONLY a JSON object between the markers, nothing else:
 <<<ROADMAP>>>
@@ -90,13 +91,14 @@ BUILD_PROMPT = HEAD + """Add roadmap items to the frame "{frame}" on {name}'s Mi
 
 Create exactly ONE sticky note (or card, if sticky notes are unavailable) per row below, INSIDE the
 frame, at the intersection of the row's lane (a row of the grid, named down the left edge) and its
-column (named across the top). Text = the title, plus " — " and the owners if any. If the cell
+column (named across the top). Text = the title, plus " — " and the owners if any. Sticky colour by
+state: not_started = light gray, in_progress = yellow, blocked = red, done = green. If the cell
 already has items, place the new one beside them without overlapping; if the cell is full, place
 it just outside the frame next to that lane and say so in "note".
 
 NEVER delete, move, resize or edit any existing item. Do not create anything not listed here.
 
-Rows (id, title, owners, lane, column):
+Rows (id, title, owners, lane, column, state):
 {rows}
 
 Reply with ONLY a JSON object between the markers, nothing else:
@@ -223,7 +225,7 @@ def _ask(mode, prompt, tools):
 
 
 def _rows_text(rows):
-    return "\n".join(f'- {r["id"]} | {r["title"]} | {r["owners"] or "-"} | {r["lane"] or "?"} | {r["column"] or "?"}'
+    return "\n".join(f'- {r["id"]} | {r["title"]} | {r["owners"] or "-"} | {r["lane"] or "?"} | {r["column"] or "?"} | {r.get("state") or "not_started"}'
                      for r in rows) or "- (none)"
 
 
