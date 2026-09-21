@@ -59,7 +59,8 @@ def claude_steps(steps):
                 gmail = True
             if "miro" in low and up:
                 miro = True
-                src = "plugin" if "plugin" in low else "connector"
+                # plugin:miro:miro / claude.ai Miro / a user-added server literally named "miro"
+                src = "plugin" if "plugin" in low else ("connector" if "claude.ai" in low else "server")
                 if miro_source != "plugin":
                     miro_source = src
     steps.append({"id": "slack", "ok": slack, "optional": True, "title": "Slack connected (optional)",
