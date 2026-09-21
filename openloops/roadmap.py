@@ -57,8 +57,9 @@ Known columns (must match exactly, or "" if unsure): {columns}
 People {name} works with (use for owners when a first name appears): {people}
 
 For each row: title (short, imperative or noun phrase), detail (one line, may be ""), owners
-(comma-separated names or ""), lane, column, state - "done" if the note says it is finished,
-"blocked" if it is waiting on someone / something else or explicitly stuck, "in_progress" if it is
+(comma-separated names or ""), lane, column, state - "blocked" if it is waiting on someone /
+something else or explicitly stuck (even if the work itself is finished, e.g. "done, waiting for
+sign-off"), "done" if it is finished and nothing more is awaited from anyone, "in_progress" if it is
 being worked on, otherwise "not_started".
 
 Reply with ONLY a JSON object between the markers, nothing else:
