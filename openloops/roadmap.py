@@ -57,8 +57,9 @@ Known columns (must match exactly, or "" if unsure): {columns}
 People {name} works with (use for owners when a first name appears): {people}
 
 For each row: title (short, imperative or noun phrase), detail (one line, may be ""), owners
-(comma-separated names or ""), lane, column, state - "done" if the note says it is finished,
-"blocked" if it is waiting on someone / something else or explicitly stuck, "in_progress" if it is
+(comma-separated names or ""), lane, column, state - "blocked" if it is waiting on someone /
+something else or explicitly stuck (even if the work itself is finished, e.g. "done, waiting for
+sign-off"), "done" if it is finished and nothing more is awaited from anyone, "in_progress" if it is
 being worked on, otherwise "not_started".
 
 Reply with ONLY a JSON object between the markers, nothing else:
@@ -106,7 +107,8 @@ data-color by state: not_started #9aa0a8 (gray), in_progress #f5c400 (yellow), b
 done #00b86b (green). Match the size of the cards already on the frame if they differ from 320x88.
 
 If the cell already has items, place the new card below them without overlapping; if the cell is
-full, place it just outside the frame next to that lane and say so in "note".
+full, place it just outside the frame next to that lane and say so in "note" (the owner will move
+it in by hand). If a card could not be created at all, report it with "item_id": "" and why in "note".
 
 NEVER delete, move, resize or edit any existing item. Do not create anything not listed here.
 The item ids you report must be the data-miro-id values from the result_svg, never invented.
@@ -118,7 +120,7 @@ Details (id: detail text):
 
 Reply with ONLY a JSON object between the markers, nothing else:
 <<<ROADMAP>>>
-{{"created": [{{"id": "r1", "item_id": "<miro item id>", "url": "<link to the item or board>", "note": ""}}]}}
+{{"created": [{{"id": "r1", "item_id": "<miro item id, or empty when not created>", "url": "<link to the item or board, or empty>", "note": "<empty, or e.g. placed outside the frame / why it was not created>"}}]}}
 <<<END>>>
 """
 
@@ -313,21 +315,33 @@ def main(mode, confirm=False):
                                          details="\n".join(f'- {r["id"]}: {r["detail"]}' for r in todo if r.get("detail")) or "- (none)"), MIRO_TOOLS)
     by_id = {r["id"]: r for r in todo}
     n = 0
-    lines = []
+    lines, missed, flagged, seen = [], [], [], set()
     for cr in out.get("created") or []:
         r = by_id.get(str(cr.get("id"))) if isinstance(cr, dict) else None
-        if not r or not cr.get("item_id"):
+        if not r:
             continue
-        r["posted_id"] = str(cr["item_id"])
+        seen.add(r["id"])
+        note = str(cr.get("note") or "").strip()
+        if not cr.get("item_id"):  # not created: row stays pending for a later build
+            missed.append(f'{r["title"]}: {note or "no reason given"}')
+            continue
+        r["posted_id"] = str(cr["item_id"])  # a card exists (maybe outside the frame - see note), so never re-add it
         lines.append(f'{cr["item_id"]}  {r["title"]}')
+        if note:
+            flagged.append(f'{r["title"]}: {note}')
         n += 1
+    missed += [f'{r["title"]}: not in the agent\'s reply' for r in todo if r["id"] not in seen]
     if lines:
         CREATED.parent.mkdir(parents=True, exist_ok=True)
         with CREATED.open("a", encoding="utf-8") as f:
             f.write("\n".join(lines) + "\n")
     d["preview"] = {"at": "", "plan": []}
     save(d)
-    print(f"done: {n} of {len(todo)} added to the board")
+    for m in flagged:  # before the summary line, so the page's console tail stays the summary
+        print("check on the board: " + m)
+    for m in missed:
+        print("not added: " + m)
+    print(f"done: {n} of {len(todo)} added to the board" + (f" ({len(missed)} not added - see the job log)" if missed else ""))
     if n < len(todo):
         sys.exit(1)
 
